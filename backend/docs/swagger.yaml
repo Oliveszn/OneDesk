@@ -1,0 +1,160 @@
+basePath: /v1
+definitions:
+  auth.AuthResponse:
+    properties:
+      role:
+        type: string
+      tenant_id:
+        type: string
+      token:
+        type: string
+      user_id:
+        type: string
+    type: object
+  auth.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  auth.SignupRequest:
+    properties:
+      business_name:
+        type: string
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  tenancy.TenantResponse:
+    properties:
+      created_at:
+        type: string
+      name:
+        type: string
+      tenant_id:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Multi-tenant REP system for OneDesk.
+  title: OneDesk API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Verifies user credentials and issues a JWT access token.
+      parameters:
+      - description: Login Credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.AuthResponse'
+        "400":
+          description: invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: invalid email or password
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: internal error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Authenticate user
+      tags:
+      - auth
+  /tenants:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new business tenant profile along with its initial root
+        admin account.
+      parameters:
+      - description: Signup Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.SignupRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/auth.AuthResponse'
+        "400":
+          description: invalid request body / validation error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: email already registered
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: internal error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new tenant
+      tags:
+      - auth
+  /tenants/me:
+    get:
+      description: Retrieves structural information about the authenticated user's
+        tenant account context.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/tenancy.TenantResponse'
+        "401":
+          description: missing tenant context / unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: internal error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get current tenant profile
+      tags:
+      - tenancy
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

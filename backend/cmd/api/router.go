@@ -6,10 +6,14 @@ import (
 	"github.com/Oliveszn/OneDesk/internal/tenancy"
 	"github.com/Oliveszn/OneDesk/internal/token"
 	"github.com/go-chi/chi/v5"
+
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
 func newRouter(authHandler *auth.Handler, tenancyHandler *tenancy.Handler, tokenService *token.JWTService) *chi.Mux {
 	r := chi.NewRouter()
+
+	r.Get("/swagger/*", httpSwagger.Handler())
 
 	// Public routes
 	r.Post("/v1/tenants", authHandler.Signup)

@@ -19,7 +19,19 @@ func NewHandler(s *Service, l *slog.Logger) *Handler {
 	return &Handler{service: s, logger: l}
 }
 
-// POST /v1/tenants
+// Signup godoc
+//
+//	@Summary		Register a new tenant
+//	@Description	Creates a new business tenant profile along with its initial root admin account.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		SignupRequest	true	"Signup Details"
+//	@Success		201		{object}	AuthResponse
+//	@Failure		400		{object}	map[string]string	"invalid request body / validation error"
+//	@Failure		409		{object}	map[string]string	"email already registered"
+//	@Failure		500		{object}	map[string]string	"internal error"
+//	@Router			/tenants [post]
 func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 	var req SignupRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
@@ -50,7 +62,19 @@ func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 	httputil.WriteJSON(w, http.StatusCreated, resp)
 }
 
-// POST /v1/auth/login
+// Login godoc
+//
+//	@Summary		Authenticate user
+//	@Description	Verifies user credentials and issues a JWT access token.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		LoginRequest	true	"Login Credentials"
+//	@Success		200		{object}	AuthResponse
+//	@Failure		400		{object}	map[string]string	"invalid request body"
+//	@Failure		401		{object}	map[string]string	"invalid email or password"
+//	@Failure		500		{object}	map[string]string	"internal error"
+//	@Router			/auth/login [post]
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {

@@ -8,16 +8,28 @@ import (
 	"os"
 	"time"
 
+	_ "github.com/Oliveszn/OneDesk/docs"
 	"github.com/Oliveszn/OneDesk/internal/auth"
 	"github.com/Oliveszn/OneDesk/internal/db"
 	"github.com/Oliveszn/OneDesk/internal/tenancy"
 	"github.com/Oliveszn/OneDesk/internal/token"
+	"github.com/joho/godotenv"
 )
 
+// @title			OneDesk API
+// @version		1.0
+// @description	Multi-tenant REP system for OneDesk.
+// @host			localhost:8080
+// @BasePath		/v1
+// @securityDefinitions.apikey BearerAuth
+// @in				header
+// @name			Authorization
 func main() {
+	godotenv.Load()
 	ctx := context.Background()
 	// For production, change this to slog.NewJSONHandler(os.Stdout, nil)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
 	appDSN := mustEnv("APP_DB_DSN")
 	serviceDSN := mustEnv("SERVICE_DB_DSN")
 	jwtSecret := mustEnv("JWT_SECRET")
