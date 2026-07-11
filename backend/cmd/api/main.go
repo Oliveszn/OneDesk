@@ -12,6 +12,7 @@ import (
 	"github.com/Oliveszn/OneDesk/internal/auth"
 	"github.com/Oliveszn/OneDesk/internal/billing"
 	"github.com/Oliveszn/OneDesk/internal/db"
+	"github.com/Oliveszn/OneDesk/internal/inventory"
 	"github.com/Oliveszn/OneDesk/internal/tenancy"
 	"github.com/Oliveszn/OneDesk/internal/token"
 	"github.com/joho/godotenv"
@@ -54,7 +55,11 @@ func main() {
 	authService := auth.NewService(tenancyRepo, tokenService, billingService)
 	authHandler := auth.NewHandler(authService, logger)
 
-	r := newRouter(authHandler, tenancyHandler, billingHandler, tokenService)
+	inventoryRepo := inventory.NewRepository()
+	inventoryService := inventory.NewService(inventoryRepo, billingService, database)
+	inventoryHandler := inventory.NewHandler(inventoryService, logger)
+
+	r := newRouter(authHandler, tenancyHandler, billingHandler, inventoryHandler, tokenService)
 
 	addr := ":8080"
 	// log.Printf("listening on %s", addr)

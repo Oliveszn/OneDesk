@@ -263,6 +263,381 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v1/products": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Provides full product catalog metrics visibility owned by the matching business group profile.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventory"
+                ],
+                "summary": "List catalog tracking records",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/inventory.ProductResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant validation credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Core relational lookup tracking query fault context",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Adds a unique tracking product variant profile under the current client scope. Enforces item ceiling controls.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventory"
+                ],
+                "summary": "Create a product item",
+                "parameters": [
+                    {
+                        "description": "Product registration data template",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/inventory.CreateProductRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/inventory.ProductResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid structural input payload values",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant validation credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Product catalog resource entitlement quota exhausted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "SKU code entry collision matching active entity records",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/products/{productId}/stock": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns current stock level breakdowns and reorder triggers across all operational warehouse points.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventory"
+                ],
+                "summary": "Get product stock levels",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Target inventory resource look up track key ID (UUID)",
+                        "name": "productId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/inventory.StockLevelResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed route identification parameters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant validation credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No item registration matches the requested ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal query execution layer exception structural crash",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/products/{productId}/stock/adjust": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mutates available balance counts up or down across distinct warehouses. Rejects operations that result in a negative total.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventory"
+                ],
+                "summary": "Adjust product stock level",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Target catalog item system resource ID (UUID)",
+                        "name": "productId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Storage destination map and balancing metrics delta values",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/inventory.AdjustStockRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/inventory.StockLevelResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed route parameters or tracking payload errors",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant validation credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Target unique identification index resource missing",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Balancing step rejected because final allocation would fall below zero",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/warehouses": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a full list of storage locations associated with the active tenant.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventory"
+                ],
+                "summary": "List all warehouses",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/inventory.WarehouseResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant validation credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal service storage lookup engine failure",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deploys a distinct inventory tracking location workspace for the tenant.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventory"
+                ],
+                "summary": "Create a new warehouse",
+                "parameters": [
+                    {
+                        "description": "Warehouse creation parameters",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/inventory.CreateWarehouseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/inventory.WarehouseResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid payload or request processing error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant validation credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -379,6 +754,93 @@ const docTemplate = `{
                 "users_used": {
                     "type": "integer",
                     "example": 2
+                }
+            }
+        },
+        "inventory.AdjustStockRequest": {
+            "type": "object",
+            "properties": {
+                "delta": {
+                    "description": "Can be negative (deductions) or positive (restocks)",
+                    "type": "integer",
+                    "example": 25
+                },
+                "warehouse_id": {
+                    "type": "string",
+                    "example": "8f076135-d858-45ec-b9cc-0320df4ee99c"
+                }
+            }
+        },
+        "inventory.CreateProductRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "Ergonomic Office Chair Premium"
+                },
+                "sku": {
+                    "type": "string",
+                    "example": "PROD-XYZ-001"
+                }
+            }
+        },
+        "inventory.CreateWarehouseRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "Lagos Central Distribution Hub"
+                }
+            }
+        },
+        "inventory.ProductResponse": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "Ergonomic Office Chair Premium"
+                },
+                "product_id": {
+                    "type": "string",
+                    "example": "bc731ee0-3333-4f9e-a89c-a1d257211140"
+                },
+                "sku": {
+                    "type": "string",
+                    "example": "PROD-XYZ-001"
+                }
+            }
+        },
+        "inventory.StockLevelResponse": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string",
+                    "example": "bc731ee0-3333-4f9e-a89c-a1d257211140"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 142
+                },
+                "reorder_point": {
+                    "type": "integer",
+                    "example": 15
+                },
+                "warehouse_id": {
+                    "type": "string",
+                    "example": "8f076135-d858-45ec-b9cc-0320df4ee99c"
+                }
+            }
+        },
+        "inventory.WarehouseResponse": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "Lagos Central Distribution Hub"
+                },
+                "warehouse_id": {
+                    "type": "string",
+                    "example": "8f076135-d858-45ec-b9cc-0320df4ee99c"
                 }
             }
         },
