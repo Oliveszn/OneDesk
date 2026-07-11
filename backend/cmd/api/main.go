@@ -10,6 +10,7 @@ import (
 
 	_ "github.com/Oliveszn/OneDesk/docs"
 	"github.com/Oliveszn/OneDesk/internal/auth"
+	"github.com/Oliveszn/OneDesk/internal/billing"
 	"github.com/Oliveszn/OneDesk/internal/db"
 	"github.com/Oliveszn/OneDesk/internal/tenancy"
 	"github.com/Oliveszn/OneDesk/internal/token"
@@ -42,14 +43,18 @@ func main() {
 
 	tokenService := token.NewJWTService(jwtSecret, 24*time.Hour)
 
+	billingRepo := billing.NewRepository(database)
+	billingService := billing.NewService(billingRepo, database)
+	billingHandler := billing.NewHandler(billingService, logger)
+
 	tenancyRepo := tenancy.NewRepository(database)
 	tenancyService := tenancy.NewService(tenancyRepo, database)
 	tenancyHandler := tenancy.NewHandler(tenancyService, logger)
 
-	authService := auth.NewService(tenancyRepo, tokenService)
+	authService := auth.NewService(tenancyRepo, tokenService, billingService)
 	authHandler := auth.NewHandler(authService, logger)
 
-	r := newRouter(authHandler, tenancyHandler, tokenService)
+	r := newRouter(authHandler, tenancyHandler, billingHandler, tokenService)
 
 	addr := ":8080"
 	// log.Printf("listening on %s", addr)

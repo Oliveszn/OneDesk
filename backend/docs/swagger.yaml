@@ -27,6 +27,62 @@ definitions:
       password:
         type: string
     type: object
+  billing.PlanResponse:
+    properties:
+      billing_interval:
+        example: monthly
+        type: string
+        x-nullable: true
+      max_orders_per_month:
+        example: 100
+        type: integer
+        x-nullable: true
+      max_products:
+        example: 50
+        type: integer
+        x-nullable: true
+      max_users:
+        description: null = unlimited
+        example: 3
+        type: integer
+        x-nullable: true
+      name:
+        example: free
+        type: string
+      price_amount:
+        example: 0
+        type: number
+      price_currency:
+        example: NGN
+        type: string
+    type: object
+  billing.UsageResponse:
+    properties:
+      orders_cap:
+        example: 100
+        type: integer
+        x-nullable: true
+      orders_used:
+        example: 42
+        type: integer
+      plan_name:
+        example: free
+        type: string
+      products_cap:
+        example: 50
+        type: integer
+        x-nullable: true
+      products_used:
+        example: 12
+        type: integer
+      users_cap:
+        example: 3
+        type: integer
+        x-nullable: true
+      users_used:
+        example: 2
+        type: integer
+    type: object
   tenancy.TenantResponse:
     properties:
       created_at:
@@ -83,6 +139,62 @@ paths:
       summary: Authenticate user
       tags:
       - auth
+  /billing/usage:
+    get:
+      description: Fetches real-time transaction, item tracking, and staff identity
+        usage statistics against plan cap thresholds.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/billing.UsageResponse'
+        "401":
+          description: missing valid tenant validation credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "402":
+          description: plan metric consumption limitation ceiling reached
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: internal service persistence layer failure
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get tenant quota consumption
+      tags:
+      - billing
+  /plans:
+    get:
+      description: Returns a matrix layout of all structural subscription plan capabilities
+        and resource limits.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/billing.PlanResponse'
+            type: array
+        "500":
+          description: internal server error context details
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List pricing tier catalogs
+      tags:
+      - billing
   /tenants:
     post:
       consumes:

@@ -70,6 +70,90 @@
                 }
             }
         },
+        "/billing/usage": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches real-time transaction, item tracking, and staff identity usage statistics against plan cap thresholds.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "billing"
+                ],
+                "summary": "Get tenant quota consumption",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/billing.UsageResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "missing valid tenant validation credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "402": {
+                        "description": "plan metric consumption limitation ceiling reached",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "internal service persistence layer failure",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/plans": {
+            "get": {
+                "description": "Returns a matrix layout of all structural subscription plan capabilities and resource limits.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "billing"
+                ],
+                "summary": "List pricing tier catalogs",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/billing.PlanResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error context details",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/tenants": {
             "post": {
                 "description": "Creates a new business tenant profile along with its initial root admin account.",
@@ -215,6 +299,80 @@
                 },
                 "password": {
                     "type": "string"
+                }
+            }
+        },
+        "billing.PlanResponse": {
+            "type": "object",
+            "properties": {
+                "billing_interval": {
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "monthly"
+                },
+                "max_orders_per_month": {
+                    "type": "integer",
+                    "x-nullable": true,
+                    "example": 100
+                },
+                "max_products": {
+                    "type": "integer",
+                    "x-nullable": true,
+                    "example": 50
+                },
+                "max_users": {
+                    "description": "null = unlimited",
+                    "type": "integer",
+                    "x-nullable": true,
+                    "example": 3
+                },
+                "name": {
+                    "type": "string",
+                    "example": "free"
+                },
+                "price_amount": {
+                    "type": "number",
+                    "example": 0
+                },
+                "price_currency": {
+                    "type": "string",
+                    "example": "NGN"
+                }
+            }
+        },
+        "billing.UsageResponse": {
+            "type": "object",
+            "properties": {
+                "orders_cap": {
+                    "type": "integer",
+                    "x-nullable": true,
+                    "example": 100
+                },
+                "orders_used": {
+                    "type": "integer",
+                    "example": 42
+                },
+                "plan_name": {
+                    "type": "string",
+                    "example": "free"
+                },
+                "products_cap": {
+                    "type": "integer",
+                    "x-nullable": true,
+                    "example": 50
+                },
+                "products_used": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "users_cap": {
+                    "type": "integer",
+                    "x-nullable": true,
+                    "example": 3
+                },
+                "users_used": {
+                    "type": "integer",
+                    "example": 2
                 }
             }
         },

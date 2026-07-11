@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/Oliveszn/OneDesk/internal/billing"
 	"github.com/Oliveszn/OneDesk/internal/tenancy"
 	"github.com/Oliveszn/OneDesk/internal/token"
 	"github.com/Oliveszn/OneDesk/internal/validate"
@@ -14,12 +15,13 @@ import (
 var ErrInvalidCredentials = errors.New("invalid email or password")
 
 type Service struct {
-	repo  *tenancy.Repository
-	token *token.JWTService
+	repo    *tenancy.Repository
+	token   *token.JWTService
+	billing *billing.Service
 }
 
-func NewService(repo *tenancy.Repository, t *token.JWTService) *Service {
-	return &Service{repo: repo, token: t}
+func NewService(repo *tenancy.Repository, t *token.JWTService, b *billing.Service) *Service {
+	return &Service{repo: repo, token: t, billing: b}
 }
 
 func (s *Service) Signup(ctx context.Context, req SignupRequest) (*AuthResponse, error) {
@@ -41,6 +43,10 @@ func (s *Service) Signup(ctx context.Context, req SignupRequest) (*AuthResponse,
 	tenant, user, err := s.repo.CreateTenantWithAdmin(ctx, req.BusinessName, req.Email, string(hash))
 	if err != nil {
 		return nil, fmt.Errorf("create tenant DB error: %w", err)
+	}
+
+	if err := s.billing.AssignDefaultPlan(ctx, tenant.TenantID); err != nil {
+		return nil, fmt.Errorf("assigning default plan: %w", err)
 	}
 
 	jwt, err := s.token.Issue(user.UserID, tenant.TenantID, user.Role)
