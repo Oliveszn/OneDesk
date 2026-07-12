@@ -19,6 +19,7 @@ type OrderPlacedItem struct {
 	ProductID   uuid.UUID
 	WarehouseID uuid.UUID
 	Quantity    int
+	UnitPrice   float64
 }
 
 // ErrInsufficientStock is returned by inventory's order.placed handler

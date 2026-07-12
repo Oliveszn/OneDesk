@@ -143,6 +143,7 @@ func (s *Service) PlaceOrder(ctx context.Context, tenantID uuid.UUID, req Create
 			ProductID:   it.ProductID,
 			WarehouseID: it.WarehouseID,
 			Quantity:    it.Quantity,
+			UnitPrice:   it.UnitPrice,
 		}
 	}
 

@@ -13,6 +13,7 @@ import (
 	"github.com/Oliveszn/OneDesk/internal/billing"
 	"github.com/Oliveszn/OneDesk/internal/db"
 	"github.com/Oliveszn/OneDesk/internal/events"
+	"github.com/Oliveszn/OneDesk/internal/finance"
 	"github.com/Oliveszn/OneDesk/internal/inventory"
 	"github.com/Oliveszn/OneDesk/internal/sales"
 	"github.com/Oliveszn/OneDesk/internal/tenancy"
@@ -66,10 +67,15 @@ func main() {
 	salesService := sales.NewService(salesRepo, billingService, bus, database)
 	salesHandler := sales.NewHandler(salesService, logger)
 
+	financeRepo := finance.NewRepository()
+	financeService := finance.NewService(financeRepo, database)
+	financeHandler := finance.NewHandler(financeService, logger)
+
 	//this the place where sales, inventory and finace is connected
 	bus.Subscribe(events.TypeOrderPlaced, inventoryService.HandleOrderPlaced)
+	bus.Subscribe(events.TypeOrderPlaced, financeService.HandleOrderPlaced)
 
-	r := newRouter(authHandler, tenancyHandler, billingHandler, inventoryHandler, salesHandler, tokenService)
+	r := newRouter(authHandler, tenancyHandler, billingHandler, inventoryHandler, salesHandler, financeHandler, tokenService)
 
 	addr := ":8080"
 	// log.Printf("listening on %s", addr)
