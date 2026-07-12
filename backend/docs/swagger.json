@@ -258,6 +258,252 @@
                 }
             }
         },
+        "/v1/customers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all customer profiles matching the active tenant organizational boundary.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sales"
+                ],
+                "summary": "List tenant customer accounts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/sales.CustomerResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant validation credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal service database lookup fault",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Registers a new customer account record attached to the current active tenant workspace.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sales"
+                ],
+                "summary": "Create a new customer profile",
+                "parameters": [
+                    {
+                        "description": "Customer details input parameters",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sales.CreateCustomerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/sales.CustomerResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid payload data syntax or missing required fields",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant validation credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/orders": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Submits a sales checkout request, consumes monthly plan order entitlement quotas, and runs transactional inventory stock deductions.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sales"
+                ],
+                "summary": "Place a new sales order",
+                "parameters": [
+                    {
+                        "description": "Order checklist containing items list details mapping",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sales.CreateOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/sales.OrderResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid references or schema entity fields input data validation errors",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant validation credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Active monthly plan order transaction cap limit exhausted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Order registered but partial stock depletion triggered a fallback state",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/orders/{orderId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches the comprehensive order composition manifest, settlement pricing math summaries, and current routing lifecycle status tags.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sales"
+                ],
+                "summary": "Get details of a sales order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System transaction reference token lookup ID (UUID)",
+                        "name": "orderId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/sales.OrderResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed track sequence path identifier value format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant validation credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No transactional invoice matches the specified trace index ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Core data repository extraction execution block runtime failure",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/v1/products": {
             "get": {
                 "security": [
@@ -835,6 +1081,122 @@
                 "warehouse_id": {
                     "type": "string",
                     "example": "8f076135-d858-45ec-b9cc-0320df4ee99c"
+                }
+            }
+        },
+        "sales.CreateCustomerRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "johndoe@example.com"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "John Doe"
+                }
+            }
+        },
+        "sales.CreateOrderRequest": {
+            "type": "object",
+            "properties": {
+                "customer_id": {
+                    "type": "string",
+                    "example": "a4b6c8d0-1234-5678-90ab-cdef12345678"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sales.OrderItemRequest"
+                    }
+                }
+            }
+        },
+        "sales.CustomerResponse": {
+            "type": "object",
+            "properties": {
+                "customer_id": {
+                    "type": "string",
+                    "example": "a4b6c8d0-1234-5678-90ab-cdef12345678"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "johndoe@example.com"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "John Doe"
+                }
+            }
+        },
+        "sales.OrderItemRequest": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string",
+                    "example": "bc731ee0-3333-4f9e-a89c-a1d257211140"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "unit_price": {
+                    "description": "Client-supplied; no pricing catalog yet",
+                    "type": "number",
+                    "example": 25000
+                },
+                "warehouse_id": {
+                    "type": "string",
+                    "example": "8f076135-d858-45ec-b9cc-0320df4ee99c"
+                }
+            }
+        },
+        "sales.OrderItemResponse": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string",
+                    "example": "bc731ee0-3333-4f9e-a89c-a1d257211140"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "unit_price": {
+                    "type": "number",
+                    "example": 25000
+                },
+                "warehouse_id": {
+                    "type": "string",
+                    "example": "8f076135-d858-45ec-b9cc-0320df4ee99c"
+                }
+            }
+        },
+        "sales.OrderResponse": {
+            "type": "object",
+            "properties": {
+                "customer_id": {
+                    "type": "string",
+                    "example": "a4b6c8d0-1234-5678-90ab-cdef12345678"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sales.OrderItemResponse"
+                    }
+                },
+                "order_id": {
+                    "type": "string",
+                    "example": "d3b07384-d113-4956-953e-52f01f05e3d9"
+                },
+                "status": {
+                    "description": "e.g., pending, fulfilled, stock_issue",
+                    "type": "string",
+                    "example": "fulfilled"
+                },
+                "total": {
+                    "type": "number",
+                    "example": 50000
                 }
             }
         },

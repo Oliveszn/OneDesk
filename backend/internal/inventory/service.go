@@ -7,6 +7,7 @@ import (
 
 	"github.com/Oliveszn/OneDesk/internal/billing"
 	"github.com/Oliveszn/OneDesk/internal/db"
+	"github.com/Oliveszn/OneDesk/internal/events"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -174,6 +175,30 @@ func (s *Service) GetStockLevels(ctx context.Context, tenantID, productID uuid.U
 		return nil, err
 	}
 	return out, nil
+}
+
+func (s *Service) HandleOrderPlaced(ctx context.Context, e events.Event) error {
+	payload, ok := e.Payload.(events.OrderPlacedPayload)
+	if !ok {
+		return fmt.Errorf("inventory: unexpected payload type for %s", events.TypeOrderPlaced)
+	}
+
+	return s.db.WithTenant(ctx, e.TenantID, func(tx pgx.Tx) error {
+		for _, item := range payload.Items {
+			if _, err := s.repo.GetProduct(ctx, tx, e.TenantID, item.ProductID); err != nil {
+				return fmt.Errorf("product %s: %w", item.ProductID, err)
+			}
+
+			_, ok, err := s.repo.AdjustStock(ctx, tx, e.TenantID, item.ProductID, item.WarehouseID, -item.Quantity)
+			if err != nil {
+				return fmt.Errorf("product %s: %w", item.ProductID, err)
+			}
+			if !ok {
+				return fmt.Errorf("product %s: %w", item.ProductID, events.ErrInsufficientStock)
+			}
+		}
+		return nil
+	})
 }
 
 func isDuplicateKeyError(err error) bool {

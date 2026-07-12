@@ -12,7 +12,9 @@ import (
 	"github.com/Oliveszn/OneDesk/internal/auth"
 	"github.com/Oliveszn/OneDesk/internal/billing"
 	"github.com/Oliveszn/OneDesk/internal/db"
+	"github.com/Oliveszn/OneDesk/internal/events"
 	"github.com/Oliveszn/OneDesk/internal/inventory"
+	"github.com/Oliveszn/OneDesk/internal/sales"
 	"github.com/Oliveszn/OneDesk/internal/tenancy"
 	"github.com/Oliveszn/OneDesk/internal/token"
 	"github.com/joho/godotenv"
@@ -43,6 +45,7 @@ func main() {
 	defer database.Close()
 
 	tokenService := token.NewJWTService(jwtSecret, 24*time.Hour)
+	bus := events.NewBus()
 
 	billingRepo := billing.NewRepository(database)
 	billingService := billing.NewService(billingRepo, database)
@@ -59,7 +62,14 @@ func main() {
 	inventoryService := inventory.NewService(inventoryRepo, billingService, database)
 	inventoryHandler := inventory.NewHandler(inventoryService, logger)
 
-	r := newRouter(authHandler, tenancyHandler, billingHandler, inventoryHandler, tokenService)
+	salesRepo := sales.NewRepository()
+	salesService := sales.NewService(salesRepo, billingService, bus, database)
+	salesHandler := sales.NewHandler(salesService, logger)
+
+	//this the place where sales, inventory and finace is connected
+	bus.Subscribe(events.TypeOrderPlaced, inventoryService.HandleOrderPlaced)
+
+	r := newRouter(authHandler, tenancyHandler, billingHandler, inventoryHandler, salesHandler, tokenService)
 
 	addr := ":8080"
 	// log.Printf("listening on %s", addr)
