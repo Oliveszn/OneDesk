@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/Oliveszn/OneDesk/internal/billing"
 	"github.com/Oliveszn/OneDesk/internal/db"
@@ -14,14 +15,27 @@ import (
 
 var ErrInvalidAdjustment = errors.New("stock adjustment would result in a negative quantity")
 
+// stockLowCandidate is an internal bookkeeping type — a product/warehouse
+// pair whose quantity crossed below its reorder point during an
+// adjustment, collected during a transaction and published as stock.low
+// events AFTER that transaction commits (see the publish calls below for
+// why: never publish from inside a still-open transaction whose outcome
+// isn't final yet).
+type stockLowCandidate struct {
+	ProductID    uuid.UUID
+	WarehouseID  uuid.UUID
+	ReorderPoint int
+}
+
 type Service struct {
 	repo    *Repository
 	billing *billing.Service
+	bus     *events.Bus
 	db      *db.DB
 }
 
-func NewService(repo *Repository, b *billing.Service, d *db.DB) *Service {
-	return &Service{repo: repo, billing: b, db: d}
+func NewService(repo *Repository, b *billing.Service, bus *events.Bus, d *db.DB) *Service {
+	return &Service{repo: repo, billing: b, bus: bus, db: d}
 }
 
 func (s *Service) CreateWarehouse(ctx context.Context, tenantID uuid.UUID, name string) (*WarehouseResponse, error) {
@@ -116,21 +130,23 @@ func (s *Service) AdjustStock(ctx context.Context, tenantID, productID uuid.UUID
 	}
 
 	var resp StockLevelResponse
+	var lowStock *stockLowCandidate
+
 	err = s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
-		// Confirms the product exists and belongs to this tenant before touching stock
+
 		if _, err := s.repo.GetProduct(ctx, tx, tenantID, productID); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return ErrProductNotFound
-			}
-			return fmt.Errorf("lookup product existence confirmation: %w", err)
+			return err
 		}
 
-		newQty, ok, err := s.repo.AdjustStock(ctx, tx, tenantID, productID, warehouseID, req.Delta)
+		newQty, reorderPoint, ok, err := s.repo.AdjustStock(ctx, tx, tenantID, productID, warehouseID, req.Delta)
 		if err != nil {
-			return fmt.Errorf("repo adjust stock inventory balance tracking execution: %w", err)
+			return err
 		}
 		if !ok {
 			return ErrInvalidAdjustment
+		}
+		if reorderPoint > 0 && newQty < reorderPoint {
+			lowStock = &stockLowCandidate{ProductID: productID, WarehouseID: warehouseID, ReorderPoint: reorderPoint}
 		}
 
 		resp = StockLevelResponse{
@@ -143,6 +159,11 @@ func (s *Service) AdjustStock(ctx context.Context, tenantID, productID uuid.UUID
 	if err != nil {
 		return nil, err
 	}
+
+	if lowStock != nil {
+		s.publishStockLow(ctx, tenantID, *lowStock)
+	}
+
 	return &resp, nil
 }
 
@@ -183,22 +204,88 @@ func (s *Service) HandleOrderPlaced(ctx context.Context, e events.Event) error {
 		return fmt.Errorf("inventory: unexpected payload type for %s", events.TypeOrderPlaced)
 	}
 
-	return s.db.WithTenant(ctx, e.TenantID, func(tx pgx.Tx) error {
+	var lowStock []stockLowCandidate
+
+	err := s.db.WithTenant(ctx, e.TenantID, func(tx pgx.Tx) error {
 		for _, item := range payload.Items {
 			if _, err := s.repo.GetProduct(ctx, tx, e.TenantID, item.ProductID); err != nil {
 				return fmt.Errorf("product %s: %w", item.ProductID, err)
 			}
 
-			_, ok, err := s.repo.AdjustStock(ctx, tx, e.TenantID, item.ProductID, item.WarehouseID, -item.Quantity)
+			newQty, reorderPoint, ok, err := s.repo.AdjustStock(ctx, tx, e.TenantID, item.ProductID, item.WarehouseID, -item.Quantity)
 			if err != nil {
 				return fmt.Errorf("product %s: %w", item.ProductID, err)
 			}
 			if !ok {
 				return fmt.Errorf("product %s: %w", item.ProductID, events.ErrInsufficientStock)
 			}
+			if reorderPoint > 0 && newQty < reorderPoint {
+				lowStock = append(lowStock, stockLowCandidate{ProductID: item.ProductID, WarehouseID: item.WarehouseID, ReorderPoint: reorderPoint})
+			}
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	for _, c := range lowStock {
+		s.publishStockLow(ctx, e.TenantID, c)
+	}
+	return nil
+}
+
+// HandlePOReceived is registered as a subscriber to events.TypePOReceived
+// in cmd/api/main.go — a purchase order being marked received restocks
+// each of its line items. Positive deltas can't fail the "would go
+// negative" check, so an !ok result here would mean something is
+// actually wrong (e.g. a genuine race with a concurrent decrement
+// draining the row simultaneously) rather than an expected outcome —
+// worth surfacing as a real error rather than silently swallowing it.
+func (s *Service) HandlePOReceived(ctx context.Context, e events.Event) error {
+	payload, ok := e.Payload.(events.POReceivedPayload)
+	if !ok {
+		return fmt.Errorf("inventory: unexpected payload type for %s", events.TypePOReceived)
+	}
+
+	return s.db.WithTenant(ctx, e.TenantID, func(tx pgx.Tx) error {
+		for _, item := range payload.Items {
+			if _, err := s.repo.GetProduct(ctx, tx, e.TenantID, item.ProductID); err != nil {
+				return fmt.Errorf("product %s: %w", item.ProductID, err)
+			}
+
+			_, _, ok, err := s.repo.AdjustStock(ctx, tx, e.TenantID, item.ProductID, item.WarehouseID, item.Quantity)
+			if err != nil {
+				return fmt.Errorf("product %s: %w", item.ProductID, err)
+			}
+			if !ok {
+				return fmt.Errorf("product %s: restock failed unexpectedly (positive delta should never be rejected)", item.ProductID)
+			}
+		}
+		return nil
+	})
+}
+
+// publishStockLow is deliberately best-effort: the stock adjustment it's
+// reporting on has ALREADY committed successfully by the time this runs.
+// A failure to notify Procurement doesn't mean the adjustment failed —
+// it means a suggestion didn't get raised, which is a worse outcome for
+// the tenant than "the adjustment silently failed" would be, but not
+// one that should make an otherwise-successful stock adjustment or order
+// look like it failed. Logged, not returned, on purpose.
+func (s *Service) publishStockLow(ctx context.Context, tenantID uuid.UUID, c stockLowCandidate) {
+	err := s.bus.Publish(ctx, events.Event{
+		Type:     events.TypeStockLow,
+		TenantID: tenantID,
+		Payload: events.StockLowPayload{
+			ProductID:         c.ProductID,
+			WarehouseID:       c.WarehouseID,
+			SuggestedQuantity: c.ReorderPoint,
+		},
+	})
+	if err != nil {
+		log.Printf("inventory: publishing stock.low for product %s failed: %v", c.ProductID, err)
+	}
 }
 
 func isDuplicateKeyError(err error) bool {

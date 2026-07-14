@@ -6,6 +6,7 @@ import (
 	"github.com/Oliveszn/OneDesk/internal/finance"
 	"github.com/Oliveszn/OneDesk/internal/inventory"
 	"github.com/Oliveszn/OneDesk/internal/middleware"
+	"github.com/Oliveszn/OneDesk/internal/procurement"
 	"github.com/Oliveszn/OneDesk/internal/sales"
 	"github.com/Oliveszn/OneDesk/internal/tenancy"
 	"github.com/Oliveszn/OneDesk/internal/token"
@@ -14,7 +15,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
-func newRouter(authHandler *auth.Handler, tenancyHandler *tenancy.Handler, billingHandler *billing.Handler, inventoryHandler *inventory.Handler, salesHandler *sales.Handler, financeHandler *finance.Handler, tokenService *token.JWTService) *chi.Mux {
+func newRouter(authHandler *auth.Handler, tenancyHandler *tenancy.Handler, billingHandler *billing.Handler, inventoryHandler *inventory.Handler, salesHandler *sales.Handler, financeHandler *finance.Handler, procurementHandler *procurement.Handler, tokenService *token.JWTService) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Get("/swagger/*", httpSwagger.Handler())
@@ -45,6 +46,13 @@ func newRouter(authHandler *auth.Handler, tenancyHandler *tenancy.Handler, billi
 		r.Get("/v1/invoices", financeHandler.ListInvoices)
 		r.Get("/v1/invoices/{invoiceId}", financeHandler.GetInvoice)
 		r.Patch("/v1/invoices/{invoiceId}/pay", financeHandler.PayInvoice)
+
+		r.Post("/v1/vendors", procurementHandler.CreateVendor)
+		r.Get("/v1/vendors", procurementHandler.ListVendors)
+		r.Get("/v1/purchase-orders", procurementHandler.ListPurchaseOrders)
+		r.Get("/v1/purchase-orders/{poId}", procurementHandler.GetPurchaseOrder)
+		r.Patch("/v1/purchase-orders/{poId}/send", procurementHandler.SendPurchaseOrder)
+		r.Post("/v1/purchase-orders/{poId}/receive", procurementHandler.ReceivePurchaseOrder)
 	})
 
 	return r

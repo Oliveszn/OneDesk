@@ -359,6 +359,192 @@
                 }
             }
         },
+        "/v1/invoices": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all issued invoices bound to the current tenant context.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "finance"
+                ],
+                "summary": "List tenant invoice ledger records",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/finance.InvoiceResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal service database ledger query fault",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/invoices/{invoiceId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves structural billing components, settlement balance quantities, and paid statuses for a specific invoice.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "finance"
+                ],
+                "summary": "Get details of an invoice",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System invoice tracking index token (UUID)",
+                        "name": "invoiceId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finance.InvoiceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed route sequence path ID value format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No invoice record matches the specified balance trace token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal service ledger entity retrieval database error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/invoices/{invoiceId}/pay": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Transitions an open invoice state to paid.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "finance"
+                ],
+                "summary": "Process invoice settlement payment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System invoice tracking index token (UUID)",
+                        "name": "invoiceId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finance.InvoiceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed route sequence path ID value format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No invoice record matches the specified balance trace token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal service balance modification execution pipeline error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/v1/orders": {
             "post": {
                 "security": [
@@ -994,6 +1180,32 @@
                 "users_used": {
                     "type": "integer",
                     "example": 2
+                }
+            }
+        },
+        "finance.InvoiceResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number",
+                    "example": 1500.5
+                },
+                "invoice_id": {
+                    "type": "string",
+                    "example": "e5f6g7h8-1234-5678-90ab-cdef12345678"
+                },
+                "issued_at": {
+                    "type": "string",
+                    "example": "2026-07-12T21:15:35Z"
+                },
+                "order_id": {
+                    "type": "string",
+                    "example": "d3b07384-d113-4956-953e-52f01f05e3d9"
+                },
+                "status": {
+                    "description": "e.g., pending, paid, cancelled",
+                    "type": "string",
+                    "example": "paid"
                 }
             }
         },

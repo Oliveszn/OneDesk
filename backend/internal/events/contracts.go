@@ -23,5 +23,29 @@ type OrderPlacedItem struct {
 }
 
 // ErrInsufficientStock is returned by inventory's order.placed handler
-// when an order can't be fulfilled from the requested warehouse.
+// when an order can't be fulfilled from the requested warehouse
 var ErrInsufficientStock = errors.New("insufficient stock to fulfill order")
+
+// TypeStockLow is pub by Inventory whenever a stock adjustment takes a product/warehouse below its reorder point
+const TypeStockLow = "stock.low"
+
+type StockLowPayload struct {
+	ProductID         uuid.UUID
+	WarehouseID       uuid.UUID
+	SuggestedQuantity int
+}
+
+// TypePOReceived is pub by Procurement when a purchase order is marked received.
+// Inventory subscribes to restock accordingly
+const TypePOReceived = "po.received"
+
+type POReceivedPayload struct {
+	POID  uuid.UUID
+	Items []POReceivedItem
+}
+
+type POReceivedItem struct {
+	ProductID   uuid.UUID
+	WarehouseID uuid.UUID
+	Quantity    int
+}

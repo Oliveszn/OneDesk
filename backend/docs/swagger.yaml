@@ -83,6 +83,25 @@ definitions:
         example: 2
         type: integer
     type: object
+  finance.InvoiceResponse:
+    properties:
+      amount:
+        example: 1500.5
+        type: number
+      invoice_id:
+        example: e5f6g7h8-1234-5678-90ab-cdef12345678
+        type: string
+      issued_at:
+        example: "2026-07-12T21:15:35Z"
+        type: string
+      order_id:
+        example: d3b07384-d113-4956-953e-52f01f05e3d9
+        type: string
+      status:
+        description: e.g., pending, paid, cancelled
+        example: paid
+        type: string
+    type: object
   inventory.AdjustStockRequest:
     properties:
       delta:
@@ -473,6 +492,126 @@ paths:
       summary: Create a new customer profile
       tags:
       - sales
+  /v1/invoices:
+    get:
+      description: Returns all issued invoices bound to the current tenant context.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/finance.InvoiceResponse'
+            type: array
+        "401":
+          description: Missing valid tenant credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal service database ledger query fault
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List tenant invoice ledger records
+      tags:
+      - finance
+  /v1/invoices/{invoiceId}:
+    get:
+      description: Retrieves structural billing components, settlement balance quantities,
+        and paid statuses for a specific invoice.
+      parameters:
+      - description: System invoice tracking index token (UUID)
+        in: path
+        name: invoiceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finance.InvoiceResponse'
+        "400":
+          description: Malformed route sequence path ID value format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Missing valid tenant credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: No invoice record matches the specified balance trace token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal service ledger entity retrieval database error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get details of an invoice
+      tags:
+      - finance
+  /v1/invoices/{invoiceId}/pay:
+    patch:
+      description: Transitions an open invoice state to paid.
+      parameters:
+      - description: System invoice tracking index token (UUID)
+        in: path
+        name: invoiceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finance.InvoiceResponse'
+        "400":
+          description: Malformed route sequence path ID value format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Missing valid tenant credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: No invoice record matches the specified balance trace token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal service balance modification execution pipeline error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Process invoice settlement payment
+      tags:
+      - finance
   /v1/orders:
     post:
       consumes:

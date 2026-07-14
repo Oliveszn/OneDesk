@@ -110,31 +110,30 @@ func (r *Repository) ListProducts(ctx context.Context, tx pgx.Tx, tenantID uuid.
 }
 
 // AdjustStock atomically applies delta (positive or negative) to a product's stock at a specific warehouse
-func (r *Repository) AdjustStock(ctx context.Context, tx pgx.Tx, tenantID, productID, warehouseID uuid.UUID, delta int) (int, bool, error) {
+func (r *Repository) AdjustStock(ctx context.Context, tx pgx.Tx, tenantID, productID, warehouseID uuid.UUID, delta int) (newQuantity int, reorderPoint int, ok bool, err error) {
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO stock_levels (product_id, warehouse_id, tenant_id, quantity, reorder_point)
 		 VALUES ($1, $2, $3, 0, 0)
 		 ON CONFLICT (product_id, warehouse_id) DO NOTHING`,
 		productID, warehouseID, tenantID,
 	); err != nil {
-		return 0, false, fmt.Errorf("ensuring stock row: %w", err)
+		return 0, 0, false, fmt.Errorf("ensuring stock row: %w", err)
 	}
 
-	var newQuantity int
-	err := tx.QueryRow(ctx,
+	err = tx.QueryRow(ctx,
 		`UPDATE stock_levels SET quantity = quantity + $1
 		 WHERE product_id = $2 AND warehouse_id = $3 AND tenant_id = $4
 		   AND quantity + $1 >= 0
-		 RETURNING quantity`,
+		 RETURNING quantity, reorder_point`,
 		delta, productID, warehouseID, tenantID,
-	).Scan(&newQuantity)
+	).Scan(&newQuantity, &reorderPoint)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, false, nil // would have gone negative — cap check failed
+			return 0, 0, false, nil // would have gone negative — cap check failed
 		}
-		return 0, false, fmt.Errorf("adjusting stock: %w", err)
+		return 0, 0, false, fmt.Errorf("adjusting stock: %w", err)
 	}
-	return newQuantity, true, nil
+	return newQuantity, reorderPoint, true, nil
 }
 
 func (r *Repository) GetStockLevels(ctx context.Context, tx pgx.Tx, tenantID, productID uuid.UUID) ([]StockLevel, error) {

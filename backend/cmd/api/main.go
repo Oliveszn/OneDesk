@@ -15,6 +15,7 @@ import (
 	"github.com/Oliveszn/OneDesk/internal/events"
 	"github.com/Oliveszn/OneDesk/internal/finance"
 	"github.com/Oliveszn/OneDesk/internal/inventory"
+	"github.com/Oliveszn/OneDesk/internal/procurement"
 	"github.com/Oliveszn/OneDesk/internal/sales"
 	"github.com/Oliveszn/OneDesk/internal/tenancy"
 	"github.com/Oliveszn/OneDesk/internal/token"
@@ -60,7 +61,7 @@ func main() {
 	authHandler := auth.NewHandler(authService, logger)
 
 	inventoryRepo := inventory.NewRepository()
-	inventoryService := inventory.NewService(inventoryRepo, billingService, database)
+	inventoryService := inventory.NewService(inventoryRepo, billingService, bus, database)
 	inventoryHandler := inventory.NewHandler(inventoryService, logger)
 
 	salesRepo := sales.NewRepository()
@@ -71,11 +72,17 @@ func main() {
 	financeService := finance.NewService(financeRepo, database)
 	financeHandler := finance.NewHandler(financeService, logger)
 
+	procurementRepo := procurement.NewRepository()
+	procurementService := procurement.NewService(procurementRepo, bus, database)
+	procurementHandler := procurement.NewHandler(procurementService, logger)
+
 	//this the place where sales, inventory and finace is connected
 	bus.Subscribe(events.TypeOrderPlaced, inventoryService.HandleOrderPlaced)
 	bus.Subscribe(events.TypeOrderPlaced, financeService.HandleOrderPlaced)
+	bus.Subscribe(events.TypeStockLow, procurementService.HandleStockLow)
+	bus.Subscribe(events.TypePOReceived, inventoryService.HandlePOReceived)
 
-	r := newRouter(authHandler, tenancyHandler, billingHandler, inventoryHandler, salesHandler, financeHandler, tokenService)
+	r := newRouter(authHandler, tenancyHandler, billingHandler, inventoryHandler, salesHandler, financeHandler, procurementHandler, tokenService)
 
 	addr := ":8080"
 	// log.Printf("listening on %s", addr)
