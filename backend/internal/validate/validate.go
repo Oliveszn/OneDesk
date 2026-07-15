@@ -8,9 +8,10 @@ import (
 )
 
 var (
-	ErrPasswordTooShort = errors.New("password must be at least 8 characters")
-	ErrEmailRequired    = errors.New("a valid email is required")
-	ErrInvalidUUID      = errors.New("invalid id format")
+	ErrPasswordTooShort     = errors.New("password must be at least 8 characters")
+	ErrEmailRequired        = errors.New("a valid email is required")
+	ErrInvalidUUID          = errors.New("invalid id format")
+	ErrBusinessNameRequired = errors.New("business_name is required")
 )
 
 func Password(p string) error {

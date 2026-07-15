@@ -356,41 +356,7 @@ paths:
       summary: Authenticate user
       tags:
       - auth
-  /billing/usage:
-    get:
-      description: Fetches real-time transaction, item tracking, and staff identity
-        usage statistics against plan cap thresholds.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/billing.UsageResponse'
-        "401":
-          description: missing valid tenant validation credentials
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "402":
-          description: plan metric consumption limitation ceiling reached
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: internal service persistence layer failure
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get tenant quota consumption
-      tags:
-      - billing
-  /plans:
+  /billing/plans:
     get:
       description: Returns a matrix layout of all structural subscription plan capabilities
         and resource limits.
@@ -406,12 +372,578 @@ paths:
         "500":
           description: internal server error context details
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httputil.APIError'
       summary: List pricing tier catalogs
       tags:
       - billing
+  /billing/usage:
+    get:
+      description: Fetches real-time transaction, item tracking, and staff identity
+        usage statistics against plan cap thresholds.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/billing.UsageResponse'
+        "401":
+          description: missing valid tenant validation credentials
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "402":
+          description: plan metric consumption limitation ceiling reached
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "500":
+          description: internal service persistence layer failure
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+      security:
+      - BearerAuth: []
+      summary: Get tenant quota consumption
+      tags:
+      - billing
+  /customers:
+    get:
+      description: Returns all customer profiles matching the active tenant organizational
+        boundary.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/sales.CustomerResponse'
+            type: array
+        "401":
+          description: Missing valid tenant validation credentials
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "500":
+          description: Internal service database lookup fault
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+      security:
+      - BearerAuth: []
+      summary: List tenant customer accounts
+      tags:
+      - sales
+    post:
+      consumes:
+      - application/json
+      description: Registers a new customer account record attached to the current
+        active tenant workspace.
+      parameters:
+      - description: Customer details input parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/sales.CreateCustomerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/sales.CustomerResponse'
+        "400":
+          description: Invalid payload data syntax or missing required fields
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "401":
+          description: Missing valid tenant validation credentials
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+      security:
+      - BearerAuth: []
+      summary: Create a new customer profile
+      tags:
+      - sales
+  /invoices:
+    get:
+      description: Returns all issued invoices bound to the current tenant context.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/finance.InvoiceResponse'
+            type: array
+        "401":
+          description: Missing valid tenant credentials
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "500":
+          description: Internal service database ledger query fault
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+      security:
+      - BearerAuth: []
+      summary: List tenant invoice ledger records
+      tags:
+      - finance
+  /invoices/{invoiceId}:
+    get:
+      description: Retrieves structural billing components, settlement balance quantities,
+        and paid statuses for a specific invoice.
+      parameters:
+      - description: System invoice tracking index token (UUID)
+        in: path
+        name: invoiceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finance.InvoiceResponse'
+        "400":
+          description: Malformed route sequence path ID value format
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "401":
+          description: Missing valid tenant credentials
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "404":
+          description: No invoice record matches the specified balance trace token
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "500":
+          description: Internal service ledger entity retrieval database error
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+      security:
+      - BearerAuth: []
+      summary: Get details of an invoice
+      tags:
+      - finance
+  /invoices/{invoiceId}/pay:
+    patch:
+      description: Transitions an open invoice state to paid.
+      parameters:
+      - description: System invoice tracking index token (UUID)
+        in: path
+        name: invoiceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finance.InvoiceResponse'
+        "400":
+          description: Malformed route sequence path ID value format
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "401":
+          description: Missing valid tenant credentials
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "404":
+          description: No invoice record matches the specified balance trace token
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "500":
+          description: Internal service balance modification execution pipeline error
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+      security:
+      - BearerAuth: []
+      summary: Process invoice settlement payment
+      tags:
+      - finance
+  /orders:
+    post:
+      consumes:
+      - application/json
+      description: Submits a sales checkout request, consumes monthly plan order entitlement
+        quotas, and runs transactional inventory stock deductions.
+      parameters:
+      - description: Order checklist containing items list details mapping
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/sales.CreateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/sales.OrderResponse'
+        "400":
+          description: Invalid references or schema entity fields input data validation
+            errors
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "401":
+          description: Missing valid tenant validation credentials
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "403":
+          description: Active monthly plan order transaction cap limit exhausted
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "409":
+          description: Order registered but partial stock depletion triggered a fallback
+            state
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+      security:
+      - BearerAuth: []
+      summary: Place a new sales order
+      tags:
+      - sales
+  /orders/{orderId}:
+    get:
+      description: Fetches the comprehensive order composition manifest, settlement
+        pricing math summaries, and current routing lifecycle status tags.
+      parameters:
+      - description: System transaction reference token lookup ID (UUID)
+        in: path
+        name: orderId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/sales.OrderResponse'
+        "400":
+          description: Malformed track sequence path identifier value format
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "401":
+          description: Missing valid tenant validation credentials
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "404":
+          description: No transactional invoice matches the specified trace index
+            ID
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "500":
+          description: Core data repository extraction execution block runtime failure
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+      security:
+      - BearerAuth: []
+      summary: Get details of a sales order
+      tags:
+      - sales
+  /products:
+    get:
+      description: Provides full product catalog metrics visibility owned by the matching
+        business group profile.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory.ProductResponse'
+            type: array
+        "401":
+          description: Missing valid tenant validation credentials
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "500":
+          description: Core relational lookup tracking query fault context
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+      security:
+      - BearerAuth: []
+      summary: List catalog tracking records
+      tags:
+      - inventory
+    post:
+      consumes:
+      - application/json
+      description: Adds a unique tracking product variant profile under the current
+        client scope. Enforces item ceiling controls.
+      parameters:
+      - description: Product registration data template
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/inventory.CreateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory.ProductResponse'
+        "400":
+          description: Invalid structural input payload values
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "401":
+          description: Missing valid tenant validation credentials
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "403":
+          description: Product catalog resource entitlement quota exhausted
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "409":
+          description: SKU code entry collision matching active entity records
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+      security:
+      - BearerAuth: []
+      summary: Create a product item
+      tags:
+      - inventory
+  /products/{productId}/stock:
+    get:
+      description: Returns current stock level breakdowns and reorder triggers across
+        all operational warehouse points.
+      parameters:
+      - description: Target inventory resource look up track key ID (UUID)
+        in: path
+        name: productId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory.StockLevelResponse'
+            type: array
+        "400":
+          description: Malformed route identification parameters
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "401":
+          description: Missing valid tenant validation credentials
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "404":
+          description: No item registration matches the requested ID
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "500":
+          description: Internal query execution layer exception structural crash
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+      security:
+      - BearerAuth: []
+      summary: Get product stock levels
+      tags:
+      - inventory
+  /products/{productId}/stock/adjust:
+    post:
+      consumes:
+      - application/json
+      description: Mutates available balance counts up or down across distinct warehouses.
+        Rejects operations that result in a negative total.
+      parameters:
+      - description: Target catalog item system resource ID (UUID)
+        in: path
+        name: productId
+        required: true
+        type: string
+      - description: Storage destination map and balancing metrics delta values
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/inventory.AdjustStockRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory.StockLevelResponse'
+        "400":
+          description: Malformed route parameters or tracking payload errors
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "401":
+          description: Missing valid tenant validation credentials
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "404":
+          description: Target unique identification index resource missing
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "409":
+          description: Balancing step rejected because final allocation would fall
+            below zero
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+      security:
+      - BearerAuth: []
+      summary: Adjust product stock level
+      tags:
+      - inventory
+  /purchase-orders:
+    get:
+      description: Returns all tracking supply purchase orders bound to the active
+        tenant workspace.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/procurement.PurchaseOrderResponse'
+            type: array
+        "401":
+          description: Missing valid tenant credentials
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "500":
+          description: Internal query pipeline process extraction error
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+      security:
+      - BearerAuth: []
+      summary: List purchase orders
+      tags:
+      - procurement
+  /purchase-orders/{poId}:
+    get:
+      description: Fetches the layout metrics, current lifecycle stage, and structured
+        item blocks for a unique purchase order identity token.
+      parameters:
+      - description: System purchase order identifier tracking string (UUID)
+        in: path
+        name: poId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/procurement.PurchaseOrderResponse'
+        "400":
+          description: Malformed query identity format match
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "401":
+          description: Missing valid tenant credentials
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "404":
+          description: Target supply purchase tracking profile is empty
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "500":
+          description: Internal retrieval system transaction pipeline error
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+      security:
+      - BearerAuth: []
+      summary: Get purchase order details
+      tags:
+      - procurement
+  /purchase-orders/{poId}/receive:
+    post:
+      description: Executes material receipt pipelines, updating quantities and switching
+        the record track context state over into 'received' or tracking execution
+        fault statuses.
+      parameters:
+      - description: System purchase order identifier tracking string (UUID)
+        in: path
+        name: poId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "400":
+          description: Malformed tracking path arguments parameter
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "401":
+          description: Missing valid tenant credentials
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "409":
+          description: Fulfillment block mismatch (order not in 'sent' state or stock
+            calculation pipeline issue)
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+      security:
+      - BearerAuth: []
+      summary: Fulfill and settle inventory delivery
+      tags:
+      - procurement
+  /purchase-orders/{poId}/send:
+    patch:
+      consumes:
+      - application/json
+      description: Assigns a designated dispatch entity identity parameter onto a
+        'suggested' state template and transitions its status tracking to 'sent'.
+      parameters:
+      - description: System purchase order identifier tracking string (UUID)
+        in: path
+        name: poId
+        required: true
+        type: string
+      - description: Identity mapping metrics for assignment execution tracking parameters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/procurement.SendPurchaseOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/procurement.PurchaseOrderResponse'
+        "400":
+          description: Malformed route parameters or malformed entity parameters
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "401":
+          description: Missing valid tenant credentials
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "404":
+          description: Target purchase order instance index mismatch
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "409":
+          description: Target item is not structurally isolated inside the 'suggested'
+            status window
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+        "500":
+          description: Internal supply ledger modifications pipeline crash error
+          schema:
+            $ref: '#/definitions/httputil.APIError'
+      security:
+      - BearerAuth: []
+      summary: Assign vendor and send purchase order
+      tags:
+      - procurement
   /tenants:
     post:
       consumes:
@@ -461,661 +993,17 @@ paths:
         "401":
           description: missing tenant context / unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httputil.APIError'
         "500":
           description: internal error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httputil.APIError'
       security:
       - BearerAuth: []
       summary: Get current tenant profile
       tags:
       - tenancy
-  /v1/customers:
-    get:
-      description: Returns all customer profiles matching the active tenant organizational
-        boundary.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/sales.CustomerResponse'
-            type: array
-        "401":
-          description: Missing valid tenant validation credentials
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal service database lookup fault
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: List tenant customer accounts
-      tags:
-      - sales
-    post:
-      consumes:
-      - application/json
-      description: Registers a new customer account record attached to the current
-        active tenant workspace.
-      parameters:
-      - description: Customer details input parameters
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/sales.CreateCustomerRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/sales.CustomerResponse'
-        "400":
-          description: Invalid payload data syntax or missing required fields
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Missing valid tenant validation credentials
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Create a new customer profile
-      tags:
-      - sales
-  /v1/invoices:
-    get:
-      description: Returns all issued invoices bound to the current tenant context.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/finance.InvoiceResponse'
-            type: array
-        "401":
-          description: Missing valid tenant credentials
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal service database ledger query fault
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: List tenant invoice ledger records
-      tags:
-      - finance
-  /v1/invoices/{invoiceId}:
-    get:
-      description: Retrieves structural billing components, settlement balance quantities,
-        and paid statuses for a specific invoice.
-      parameters:
-      - description: System invoice tracking index token (UUID)
-        in: path
-        name: invoiceId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/finance.InvoiceResponse'
-        "400":
-          description: Malformed route sequence path ID value format
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Missing valid tenant credentials
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: No invoice record matches the specified balance trace token
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal service ledger entity retrieval database error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get details of an invoice
-      tags:
-      - finance
-  /v1/invoices/{invoiceId}/pay:
-    patch:
-      description: Transitions an open invoice state to paid.
-      parameters:
-      - description: System invoice tracking index token (UUID)
-        in: path
-        name: invoiceId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/finance.InvoiceResponse'
-        "400":
-          description: Malformed route sequence path ID value format
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Missing valid tenant credentials
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: No invoice record matches the specified balance trace token
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal service balance modification execution pipeline error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Process invoice settlement payment
-      tags:
-      - finance
-  /v1/orders:
-    post:
-      consumes:
-      - application/json
-      description: Submits a sales checkout request, consumes monthly plan order entitlement
-        quotas, and runs transactional inventory stock deductions.
-      parameters:
-      - description: Order checklist containing items list details mapping
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/sales.CreateOrderRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/sales.OrderResponse'
-        "400":
-          description: Invalid references or schema entity fields input data validation
-            errors
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Missing valid tenant validation credentials
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Active monthly plan order transaction cap limit exhausted
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: Order registered but partial stock depletion triggered a fallback
-            state
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Place a new sales order
-      tags:
-      - sales
-  /v1/orders/{orderId}:
-    get:
-      description: Fetches the comprehensive order composition manifest, settlement
-        pricing math summaries, and current routing lifecycle status tags.
-      parameters:
-      - description: System transaction reference token lookup ID (UUID)
-        in: path
-        name: orderId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/sales.OrderResponse'
-        "400":
-          description: Malformed track sequence path identifier value format
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Missing valid tenant validation credentials
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: No transactional invoice matches the specified trace index
-            ID
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Core data repository extraction execution block runtime failure
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get details of a sales order
-      tags:
-      - sales
-  /v1/products:
-    get:
-      description: Provides full product catalog metrics visibility owned by the matching
-        business group profile.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/inventory.ProductResponse'
-            type: array
-        "401":
-          description: Missing valid tenant validation credentials
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Core relational lookup tracking query fault context
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: List catalog tracking records
-      tags:
-      - inventory
-    post:
-      consumes:
-      - application/json
-      description: Adds a unique tracking product variant profile under the current
-        client scope. Enforces item ceiling controls.
-      parameters:
-      - description: Product registration data template
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/inventory.CreateProductRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/inventory.ProductResponse'
-        "400":
-          description: Invalid structural input payload values
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Missing valid tenant validation credentials
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Product catalog resource entitlement quota exhausted
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: SKU code entry collision matching active entity records
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Create a product item
-      tags:
-      - inventory
-  /v1/products/{productId}/stock:
-    get:
-      description: Returns current stock level breakdowns and reorder triggers across
-        all operational warehouse points.
-      parameters:
-      - description: Target inventory resource look up track key ID (UUID)
-        in: path
-        name: productId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/inventory.StockLevelResponse'
-            type: array
-        "400":
-          description: Malformed route identification parameters
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Missing valid tenant validation credentials
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: No item registration matches the requested ID
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal query execution layer exception structural crash
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get product stock levels
-      tags:
-      - inventory
-  /v1/products/{productId}/stock/adjust:
-    post:
-      consumes:
-      - application/json
-      description: Mutates available balance counts up or down across distinct warehouses.
-        Rejects operations that result in a negative total.
-      parameters:
-      - description: Target catalog item system resource ID (UUID)
-        in: path
-        name: productId
-        required: true
-        type: string
-      - description: Storage destination map and balancing metrics delta values
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/inventory.AdjustStockRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/inventory.StockLevelResponse'
-        "400":
-          description: Malformed route parameters or tracking payload errors
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Missing valid tenant validation credentials
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Target unique identification index resource missing
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: Balancing step rejected because final allocation would fall
-            below zero
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Adjust product stock level
-      tags:
-      - inventory
-  /v1/purchase-orders:
-    get:
-      description: Returns all tracking supply purchase orders bound to the active
-        tenant workspace.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/procurement.PurchaseOrderResponse'
-            type: array
-        "401":
-          description: Missing valid tenant credentials
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal query pipeline process extraction error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: List purchase orders
-      tags:
-      - procurement
-  /v1/purchase-orders/{poId}:
-    get:
-      description: Fetches the layout metrics, current lifecycle stage, and structured
-        item blocks for a unique purchase order identity token.
-      parameters:
-      - description: System purchase order identifier tracking string (UUID)
-        in: path
-        name: poId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/procurement.PurchaseOrderResponse'
-        "400":
-          description: Malformed query identity format match
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Missing valid tenant credentials
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Target supply purchase tracking profile is empty
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal retrieval system transaction pipeline error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get purchase order details
-      tags:
-      - procurement
-  /v1/purchase-orders/{poId}/receive:
-    post:
-      description: Executes material receipt pipelines, updating quantities and switching
-        the record track context state over into 'received' or tracking execution
-        fault statuses.
-      parameters:
-      - description: System purchase order identifier tracking string (UUID)
-        in: path
-        name: poId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "400":
-          description: Malformed tracking path arguments parameter
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Missing valid tenant credentials
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: Fulfillment block mismatch (order not in 'sent' state or stock
-            calculation pipeline issue)
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Fulfill and settle inventory delivery
-      tags:
-      - procurement
-  /v1/purchase-orders/{poId}/send:
-    patch:
-      consumes:
-      - application/json
-      description: Assigns a designated dispatch entity identity parameter onto a
-        'suggested' state template and transitions its status tracking to 'sent'.
-      parameters:
-      - description: System purchase order identifier tracking string (UUID)
-        in: path
-        name: poId
-        required: true
-        type: string
-      - description: Identity mapping metrics for assignment execution tracking parameters
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/procurement.SendPurchaseOrderRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/procurement.PurchaseOrderResponse'
-        "400":
-          description: Malformed route parameters or malformed entity parameters
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Missing valid tenant credentials
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Target purchase order instance index mismatch
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: Target item is not structurally isolated inside the 'suggested'
-            status window
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal supply ledger modifications pipeline crash error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Assign vendor and send purchase order
-      tags:
-      - procurement
-  /v1/vendors:
+  /vendors:
     get:
       description: Retrieves all vendor records assigned inside the current isolation
         context.
@@ -1131,15 +1019,11 @@ paths:
         "401":
           description: Missing valid tenant credentials
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httputil.APIError'
         "500":
           description: Internal service datastore execution error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httputil.APIError'
       security:
       - BearerAuth: []
       summary: List workspace tracking vendors
@@ -1168,21 +1052,17 @@ paths:
           description: Malformed body fields or explicit repository logic restriction
             match
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httputil.APIError'
         "401":
           description: Missing valid tenant credentials
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httputil.APIError'
       security:
       - BearerAuth: []
       summary: Register a new procurement vendor
       tags:
       - procurement
-  /v1/warehouses:
+  /warehouses:
     get:
       description: Returns a full list of storage locations associated with the active
         tenant.
@@ -1198,15 +1078,11 @@ paths:
         "401":
           description: Missing valid tenant validation credentials
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httputil.APIError'
         "500":
           description: Internal service storage lookup engine failure
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httputil.APIError'
       security:
       - BearerAuth: []
       summary: List all warehouses
@@ -1234,15 +1110,11 @@ paths:
         "400":
           description: Invalid payload or request processing error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httputil.APIError'
         "401":
           description: Missing valid tenant validation credentials
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httputil.APIError'
       security:
       - BearerAuth: []
       summary: Create a new warehouse

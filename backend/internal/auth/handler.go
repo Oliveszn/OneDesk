@@ -47,7 +47,7 @@ func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 			h.logger.Warn("signup: email conflict", "email", req.Email)
 			httputil.WriteError(w, http.StatusConflict, "email already registered")
 
-		case errors.Is(err, validate.ErrPasswordTooShort), errors.Is(err, validate.ErrEmailRequired):
+		case errors.Is(err, validate.ErrPasswordTooShort), errors.Is(err, validate.ErrEmailRequired), errors.Is(err, validate.ErrBusinessNameRequired):
 			h.logger.Warn("signup: validation failed", "error", err.Error())
 			httputil.WriteError(w, http.StatusBadRequest, err.Error())
 

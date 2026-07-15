@@ -35,7 +35,7 @@ func NewHandler(s *Service, l *slog.Logger) *Handler {
 //	@Success		201		{object}	VendorResponse
 //	@Failure		400		{object}	httputil.APIError	"Malformed body fields or explicit repository logic restriction match"
 //	@Failure		401		{object}	httputil.APIError	"Missing valid tenant credentials"
-//	@Router			/v1/vendors [post]
+//	@Router			/vendors [post]
 func (h *Handler) CreateVendor(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
 	if !ok {
@@ -70,7 +70,7 @@ func (h *Handler) CreateVendor(w http.ResponseWriter, r *http.Request) {
 //	@Success		200	{array}		VendorResponse
 //	@Failure		401	{object}	httputil.APIError	"Missing valid tenant credentials"
 //	@Failure		500	{object}	httputil.APIError	"Internal service datastore execution error"
-//	@Router			/v1/vendors [get]
+//	@Router			/vendors [get]
 func (h *Handler) ListVendors(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
 	if !ok {
@@ -98,7 +98,7 @@ func (h *Handler) ListVendors(w http.ResponseWriter, r *http.Request) {
 //	@Success		200	{array}		PurchaseOrderResponse
 //	@Failure		401	{object}	httputil.APIError	"Missing valid tenant credentials"
 //	@Failure		500	{object}	httputil.APIError	"Internal query pipeline process extraction error"
-//	@Router			/v1/purchase-orders [get]
+//	@Router			/purchase-orders [get]
 func (h *Handler) ListPurchaseOrders(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
 	if !ok {
@@ -129,7 +129,7 @@ func (h *Handler) ListPurchaseOrders(w http.ResponseWriter, r *http.Request) {
 //	@Failure		401		{object}	httputil.APIError	"Missing valid tenant credentials"
 //	@Failure		404		{object}	httputil.APIError	"Target supply purchase tracking profile is empty"
 //	@Failure		500		{object}	httputil.APIError	"Internal retrieval system transaction pipeline error"
-//	@Router			/v1/purchase-orders/{poId} [get]
+//	@Router			/purchase-orders/{poId} [get]
 func (h *Handler) GetPurchaseOrder(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
 	if !ok {
@@ -175,7 +175,7 @@ func (h *Handler) GetPurchaseOrder(w http.ResponseWriter, r *http.Request) {
 //	@Failure		404		{object}	httputil.APIError	"Target purchase order instance index mismatch"
 //	@Failure		409		{object}	httputil.APIError	"Target item is not structurally isolated inside the 'suggested' status window"
 //	@Failure		500		{object}	httputil.APIError	"Internal supply ledger modifications pipeline crash error"
-//	@Router			/v1/purchase-orders/{poId}/send [patch]
+//	@Router			/purchase-orders/{poId}/send [patch]
 func (h *Handler) SendPurchaseOrder(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
 	if !ok {
@@ -237,7 +237,7 @@ func (h *Handler) SendPurchaseOrder(w http.ResponseWriter, r *http.Request) {
 //	@Failure		400		{object}	httputil.APIError	"Malformed tracking path arguments parameter"
 //	@Failure		401		{object}	httputil.APIError	"Missing valid tenant credentials"
 //	@Failure		409		{object}	httputil.APIError	"Fulfillment block mismatch (order not in 'sent' state or stock calculation pipeline issue)"
-//	@Router			/v1/purchase-orders/{poId}/receive [post]
+//	@Router			/purchase-orders/{poId}/receive [post]
 func (h *Handler) ReceivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
 	if !ok {

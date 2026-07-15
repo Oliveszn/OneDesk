@@ -33,7 +33,7 @@ func NewHandler(s *Service, l *slog.Logger) *Handler {
 //	@Success		200	{array}		InvoiceResponse
 //	@Failure		401	{object}	httputil.APIError	"Missing valid tenant credentials"
 //	@Failure		500	{object}	httputil.APIError	"Internal service database ledger query fault"
-//	@Router			/v1/invoices [get]
+//	@Router			/invoices [get]
 func (h *Handler) ListInvoices(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
 	if !ok {
@@ -64,7 +64,7 @@ func (h *Handler) ListInvoices(w http.ResponseWriter, r *http.Request) {
 //	@Failure		401			{object}	httputil.APIError	"Missing valid tenant credentials"
 //	@Failure		404			{object}	httputil.APIError	"No invoice record matches the specified balance trace token"
 //	@Failure		500			{object}	httputil.APIError	"Internal service ledger entity retrieval database error"
-//	@Router			/v1/invoices/{invoiceId} [get]
+//	@Router			/invoices/{invoiceId} [get]
 func (h *Handler) GetInvoice(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
 	if !ok {
@@ -107,7 +107,7 @@ func (h *Handler) GetInvoice(w http.ResponseWriter, r *http.Request) {
 //	@Failure		401			{object}	httputil.APIError	"Missing valid tenant credentials"
 //	@Failure		404			{object}	httputil.APIError	"No invoice record matches the specified balance trace token"
 //	@Failure		500			{object}	httputil.APIError	"Internal service balance modification execution pipeline error"
-//	@Router			/v1/invoices/{invoiceId}/pay [patch]
+//	@Router			/invoices/{invoiceId}/pay [patch]
 func (h *Handler) PayInvoice(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
 	if !ok {

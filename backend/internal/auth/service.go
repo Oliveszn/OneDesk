@@ -26,7 +26,7 @@ func NewService(repo *tenancy.Repository, t *token.JWTService, b *billing.Servic
 
 func (s *Service) Signup(ctx context.Context, req SignupRequest) (*AuthResponse, error) {
 	if req.BusinessName == "" {
-		return nil, errors.New("business_name is required")
+		return nil, validate.ErrBusinessNameRequired
 	}
 	if err := validate.Email(req.Email); err != nil {
 		return nil, fmt.Errorf("validate email: %w", err)

@@ -37,7 +37,7 @@ func NewHandler(s *Service, l *slog.Logger) *Handler {
 //	@Success		201		{object}	CustomerResponse
 //	@Failure		400		{object}	httputil.APIError	"Invalid payload data syntax or missing required fields"
 //	@Failure		401		{object}	httputil.APIError	"Missing valid tenant validation credentials"
-//	@Router			/v1/customers [post]
+//	@Router			/customers [post]
 func (h *Handler) CreateCustomer(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
 	if !ok {
@@ -72,7 +72,7 @@ func (h *Handler) CreateCustomer(w http.ResponseWriter, r *http.Request) {
 //	@Success		200	{array}		CustomerResponse
 //	@Failure		401	{object}	httputil.APIError	"Missing valid tenant validation credentials"
 //	@Failure		500	{object}	httputil.APIError	"Internal service database lookup fault"
-//	@Router			/v1/customers [get]
+//	@Router			/customers [get]
 func (h *Handler) ListCustomers(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
 	if !ok {
@@ -104,7 +104,7 @@ func (h *Handler) ListCustomers(w http.ResponseWriter, r *http.Request) {
 //	@Failure		401		{object}	httputil.APIError	"Missing valid tenant validation credentials"
 //	@Failure		403		{object}	httputil.APIError	"Active monthly plan order transaction cap limit exhausted"
 //	@Failure		409		{object}	httputil.APIError	"Order registered but partial stock depletion triggered a fallback state"
-//	@Router			/v1/orders [post]
+//	@Router			/orders [post]
 func (h *Handler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
 	if !ok {
@@ -160,7 +160,7 @@ func (h *Handler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 //	@Failure		401		{object}	httputil.APIError	"Missing valid tenant validation credentials"
 //	@Failure		404		{object}	httputil.APIError	"No transactional invoice matches the specified trace index ID"
 //	@Failure		500		{object}	httputil.APIError	"Core data repository extraction execution block runtime failure"
-//	@Router			/v1/orders/{orderId} [get]
+//	@Router			/orders/{orderId} [get]
 func (h *Handler) GetOrder(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
 	if !ok {

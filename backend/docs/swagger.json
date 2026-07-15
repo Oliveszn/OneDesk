@@ -61,6 +61,35 @@
                 }
             }
         },
+        "/billing/plans": {
+            "get": {
+                "description": "Returns a matrix layout of all structural subscription plan capabilities and resource limits.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "billing"
+                ],
+                "summary": "List pricing tier catalogs",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/billing.PlanResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error context details",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    }
+                }
+            }
+        },
         "/billing/usage": {
             "get": {
                 "security": [
@@ -86,60 +115,837 @@
                     "401": {
                         "description": "missing valid tenant validation credentials",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     },
                     "402": {
                         "description": "plan metric consumption limitation ceiling reached",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     },
                     "500": {
                         "description": "internal service persistence layer failure",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     }
                 }
             }
         },
-        "/plans": {
+        "/customers": {
             "get": {
-                "description": "Returns a matrix layout of all structural subscription plan capabilities and resource limits.",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all customer profiles matching the active tenant organizational boundary.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "billing"
+                    "sales"
                 ],
-                "summary": "List pricing tier catalogs",
+                "summary": "List tenant customer accounts",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/billing.PlanResponse"
+                                "$ref": "#/definitions/sales.CustomerResponse"
                             }
                         }
                     },
-                    "500": {
-                        "description": "internal server error context details",
+                    "401": {
+                        "description": "Missing valid tenant validation credentials",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal service database lookup fault",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Registers a new customer account record attached to the current active tenant workspace.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sales"
+                ],
+                "summary": "Create a new customer profile",
+                "parameters": [
+                    {
+                        "description": "Customer details input parameters",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sales.CreateCustomerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/sales.CustomerResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid payload data syntax or missing required fields",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant validation credentials",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/invoices": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all issued invoices bound to the current tenant context.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "finance"
+                ],
+                "summary": "List tenant invoice ledger records",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/finance.InvoiceResponse"
                             }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant credentials",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal service database ledger query fault",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/invoices/{invoiceId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves structural billing components, settlement balance quantities, and paid statuses for a specific invoice.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "finance"
+                ],
+                "summary": "Get details of an invoice",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System invoice tracking index token (UUID)",
+                        "name": "invoiceId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finance.InvoiceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed route sequence path ID value format",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant credentials",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "No invoice record matches the specified balance trace token",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal service ledger entity retrieval database error",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/invoices/{invoiceId}/pay": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Transitions an open invoice state to paid.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "finance"
+                ],
+                "summary": "Process invoice settlement payment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System invoice tracking index token (UUID)",
+                        "name": "invoiceId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finance.InvoiceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed route sequence path ID value format",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant credentials",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "No invoice record matches the specified balance trace token",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal service balance modification execution pipeline error",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/orders": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Submits a sales checkout request, consumes monthly plan order entitlement quotas, and runs transactional inventory stock deductions.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sales"
+                ],
+                "summary": "Place a new sales order",
+                "parameters": [
+                    {
+                        "description": "Order checklist containing items list details mapping",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sales.CreateOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/sales.OrderResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid references or schema entity fields input data validation errors",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant validation credentials",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "403": {
+                        "description": "Active monthly plan order transaction cap limit exhausted",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Order registered but partial stock depletion triggered a fallback state",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/orders/{orderId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches the comprehensive order composition manifest, settlement pricing math summaries, and current routing lifecycle status tags.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sales"
+                ],
+                "summary": "Get details of a sales order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System transaction reference token lookup ID (UUID)",
+                        "name": "orderId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/sales.OrderResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed track sequence path identifier value format",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant validation credentials",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "No transactional invoice matches the specified trace index ID",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Core data repository extraction execution block runtime failure",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/products": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Provides full product catalog metrics visibility owned by the matching business group profile.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventory"
+                ],
+                "summary": "List catalog tracking records",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/inventory.ProductResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant validation credentials",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Core relational lookup tracking query fault context",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Adds a unique tracking product variant profile under the current client scope. Enforces item ceiling controls.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventory"
+                ],
+                "summary": "Create a product item",
+                "parameters": [
+                    {
+                        "description": "Product registration data template",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/inventory.CreateProductRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/inventory.ProductResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid structural input payload values",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant validation credentials",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "403": {
+                        "description": "Product catalog resource entitlement quota exhausted",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "SKU code entry collision matching active entity records",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/products/{productId}/stock": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns current stock level breakdowns and reorder triggers across all operational warehouse points.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventory"
+                ],
+                "summary": "Get product stock levels",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Target inventory resource look up track key ID (UUID)",
+                        "name": "productId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/inventory.StockLevelResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed route identification parameters",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant validation credentials",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "No item registration matches the requested ID",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal query execution layer exception structural crash",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/products/{productId}/stock/adjust": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mutates available balance counts up or down across distinct warehouses. Rejects operations that result in a negative total.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventory"
+                ],
+                "summary": "Adjust product stock level",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Target catalog item system resource ID (UUID)",
+                        "name": "productId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Storage destination map and balancing metrics delta values",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/inventory.AdjustStockRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/inventory.StockLevelResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed route parameters or tracking payload errors",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant validation credentials",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Target unique identification index resource missing",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Balancing step rejected because final allocation would fall below zero",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/purchase-orders": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all tracking supply purchase orders bound to the active tenant workspace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "procurement"
+                ],
+                "summary": "List purchase orders",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/procurement.PurchaseOrderResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant credentials",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal query pipeline process extraction error",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/purchase-orders/{poId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches the layout metrics, current lifecycle stage, and structured item blocks for a unique purchase order identity token.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "procurement"
+                ],
+                "summary": "Get purchase order details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System purchase order identifier tracking string (UUID)",
+                        "name": "poId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/procurement.PurchaseOrderResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed query identity format match",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant credentials",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Target supply purchase tracking profile is empty",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal retrieval system transaction pipeline error",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/purchase-orders/{poId}/receive": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Executes material receipt pipelines, updating quantities and switching the record track context state over into 'received' or tracking execution fault statuses.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "procurement"
+                ],
+                "summary": "Fulfill and settle inventory delivery",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System purchase order identifier tracking string (UUID)",
+                        "name": "poId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "400": {
+                        "description": "Malformed tracking path arguments parameter",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant credentials",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Fulfillment block mismatch (order not in 'sent' state or stock calculation pipeline issue)",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/purchase-orders/{poId}/send": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Assigns a designated dispatch entity identity parameter onto a 'suggested' state template and transitions its status tracking to 'sent'.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "procurement"
+                ],
+                "summary": "Assign vendor and send purchase order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System purchase order identifier tracking string (UUID)",
+                        "name": "poId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Identity mapping metrics for assignment execution tracking parameters",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/procurement.SendPurchaseOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/procurement.PurchaseOrderResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed route parameters or malformed entity parameters",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant credentials",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Target purchase order instance index mismatch",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Target item is not structurally isolated inside the 'suggested' status window",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal supply ledger modifications pipeline crash error",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     }
                 }
@@ -222,993 +1028,19 @@
                     "401": {
                         "description": "missing tenant context / unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     },
                     "500": {
                         "description": "internal error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     }
                 }
             }
         },
-        "/v1/customers": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Returns all customer profiles matching the active tenant organizational boundary.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "sales"
-                ],
-                "summary": "List tenant customer accounts",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/sales.CustomerResponse"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Missing valid tenant validation credentials",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal service database lookup fault",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Registers a new customer account record attached to the current active tenant workspace.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "sales"
-                ],
-                "summary": "Create a new customer profile",
-                "parameters": [
-                    {
-                        "description": "Customer details input parameters",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/sales.CreateCustomerRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/sales.CustomerResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid payload data syntax or missing required fields",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Missing valid tenant validation credentials",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/invoices": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Returns all issued invoices bound to the current tenant context.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "finance"
-                ],
-                "summary": "List tenant invoice ledger records",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/finance.InvoiceResponse"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Missing valid tenant credentials",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal service database ledger query fault",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/invoices/{invoiceId}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieves structural billing components, settlement balance quantities, and paid statuses for a specific invoice.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "finance"
-                ],
-                "summary": "Get details of an invoice",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "System invoice tracking index token (UUID)",
-                        "name": "invoiceId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/finance.InvoiceResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Malformed route sequence path ID value format",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Missing valid tenant credentials",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "No invoice record matches the specified balance trace token",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal service ledger entity retrieval database error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/invoices/{invoiceId}/pay": {
-            "patch": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Transitions an open invoice state to paid.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "finance"
-                ],
-                "summary": "Process invoice settlement payment",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "System invoice tracking index token (UUID)",
-                        "name": "invoiceId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/finance.InvoiceResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Malformed route sequence path ID value format",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Missing valid tenant credentials",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "No invoice record matches the specified balance trace token",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal service balance modification execution pipeline error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/orders": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Submits a sales checkout request, consumes monthly plan order entitlement quotas, and runs transactional inventory stock deductions.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "sales"
-                ],
-                "summary": "Place a new sales order",
-                "parameters": [
-                    {
-                        "description": "Order checklist containing items list details mapping",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/sales.CreateOrderRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/sales.OrderResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid references or schema entity fields input data validation errors",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Missing valid tenant validation credentials",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Active monthly plan order transaction cap limit exhausted",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "409": {
-                        "description": "Order registered but partial stock depletion triggered a fallback state",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/orders/{orderId}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Fetches the comprehensive order composition manifest, settlement pricing math summaries, and current routing lifecycle status tags.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "sales"
-                ],
-                "summary": "Get details of a sales order",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "System transaction reference token lookup ID (UUID)",
-                        "name": "orderId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/sales.OrderResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Malformed track sequence path identifier value format",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Missing valid tenant validation credentials",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "No transactional invoice matches the specified trace index ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Core data repository extraction execution block runtime failure",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/products": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Provides full product catalog metrics visibility owned by the matching business group profile.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "inventory"
-                ],
-                "summary": "List catalog tracking records",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/inventory.ProductResponse"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Missing valid tenant validation credentials",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Core relational lookup tracking query fault context",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Adds a unique tracking product variant profile under the current client scope. Enforces item ceiling controls.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "inventory"
-                ],
-                "summary": "Create a product item",
-                "parameters": [
-                    {
-                        "description": "Product registration data template",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/inventory.CreateProductRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/inventory.ProductResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid structural input payload values",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Missing valid tenant validation credentials",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Product catalog resource entitlement quota exhausted",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "409": {
-                        "description": "SKU code entry collision matching active entity records",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/products/{productId}/stock": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Returns current stock level breakdowns and reorder triggers across all operational warehouse points.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "inventory"
-                ],
-                "summary": "Get product stock levels",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Target inventory resource look up track key ID (UUID)",
-                        "name": "productId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/inventory.StockLevelResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Malformed route identification parameters",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Missing valid tenant validation credentials",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "No item registration matches the requested ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal query execution layer exception structural crash",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/products/{productId}/stock/adjust": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Mutates available balance counts up or down across distinct warehouses. Rejects operations that result in a negative total.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "inventory"
-                ],
-                "summary": "Adjust product stock level",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Target catalog item system resource ID (UUID)",
-                        "name": "productId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Storage destination map and balancing metrics delta values",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/inventory.AdjustStockRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/inventory.StockLevelResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Malformed route parameters or tracking payload errors",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Missing valid tenant validation credentials",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Target unique identification index resource missing",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "409": {
-                        "description": "Balancing step rejected because final allocation would fall below zero",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/purchase-orders": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Returns all tracking supply purchase orders bound to the active tenant workspace.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "procurement"
-                ],
-                "summary": "List purchase orders",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/procurement.PurchaseOrderResponse"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Missing valid tenant credentials",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal query pipeline process extraction error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/purchase-orders/{poId}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Fetches the layout metrics, current lifecycle stage, and structured item blocks for a unique purchase order identity token.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "procurement"
-                ],
-                "summary": "Get purchase order details",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "System purchase order identifier tracking string (UUID)",
-                        "name": "poId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/procurement.PurchaseOrderResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Malformed query identity format match",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Missing valid tenant credentials",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Target supply purchase tracking profile is empty",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal retrieval system transaction pipeline error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/purchase-orders/{poId}/receive": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Executes material receipt pipelines, updating quantities and switching the record track context state over into 'received' or tracking execution fault statuses.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "procurement"
-                ],
-                "summary": "Fulfill and settle inventory delivery",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "System purchase order identifier tracking string (UUID)",
-                        "name": "poId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "400": {
-                        "description": "Malformed tracking path arguments parameter",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Missing valid tenant credentials",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "409": {
-                        "description": "Fulfillment block mismatch (order not in 'sent' state or stock calculation pipeline issue)",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/purchase-orders/{poId}/send": {
-            "patch": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Assigns a designated dispatch entity identity parameter onto a 'suggested' state template and transitions its status tracking to 'sent'.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "procurement"
-                ],
-                "summary": "Assign vendor and send purchase order",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "System purchase order identifier tracking string (UUID)",
-                        "name": "poId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Identity mapping metrics for assignment execution tracking parameters",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/procurement.SendPurchaseOrderRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/procurement.PurchaseOrderResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Malformed route parameters or malformed entity parameters",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Missing valid tenant credentials",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Target purchase order instance index mismatch",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "409": {
-                        "description": "Target item is not structurally isolated inside the 'suggested' status window",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal supply ledger modifications pipeline crash error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/vendors": {
+        "/vendors": {
             "get": {
                 "security": [
                     {
@@ -1236,19 +1068,13 @@
                     "401": {
                         "description": "Missing valid tenant credentials",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal service datastore execution error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     }
                 }
@@ -1291,25 +1117,19 @@
                     "400": {
                         "description": "Malformed body fields or explicit repository logic restriction match",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     },
                     "401": {
                         "description": "Missing valid tenant credentials",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     }
                 }
             }
         },
-        "/v1/warehouses": {
+        "/warehouses": {
             "get": {
                 "security": [
                     {
@@ -1337,19 +1157,13 @@
                     "401": {
                         "description": "Missing valid tenant validation credentials",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal service storage lookup engine failure",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     }
                 }
@@ -1392,19 +1206,13 @@
                     "400": {
                         "description": "Invalid payload or request processing error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     },
                     "401": {
                         "description": "Missing valid tenant validation credentials",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     }
                 }

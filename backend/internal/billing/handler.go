@@ -26,7 +26,7 @@ func NewHandler(s *Service, l *slog.Logger) *Handler {
 //	@Produce		json
 //	@Success		200	{array}		PlanResponse
 //	@Failure		500	{object}	httputil.APIError	"internal server error context details"
-//	@Router			/plans [get]
+//	@Router			/billing/plans [get]
 func (h *Handler) ListPlans(w http.ResponseWriter, r *http.Request) {
 	plans, err := h.service.ListPlans(r.Context())
 	if err != nil {
