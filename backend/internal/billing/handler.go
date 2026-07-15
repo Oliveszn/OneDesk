@@ -25,7 +25,7 @@ func NewHandler(s *Service, l *slog.Logger) *Handler {
 //	@Tags			billing
 //	@Produce		json
 //	@Success		200	{array}		PlanResponse
-//	@Failure		500	{object}	map[string]string	"internal server error context details"
+//	@Failure		500	{object}	httputil.APIError	"internal server error context details"
 //	@Router			/plans [get]
 func (h *Handler) ListPlans(w http.ResponseWriter, r *http.Request) {
 	plans, err := h.service.ListPlans(r.Context())
@@ -45,9 +45,9 @@ func (h *Handler) ListPlans(w http.ResponseWriter, r *http.Request) {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{object}	UsageResponse
-//	@Failure		401	{object}	map[string]string	"missing valid tenant validation credentials"
-//	@Failure		402	{object}	map[string]string	"plan metric consumption limitation ceiling reached"
-//	@Failure		500	{object}	map[string]string	"internal service persistence layer failure"
+//	@Failure		401	{object}	httputil.APIError	"missing valid tenant validation credentials"
+//	@Failure		402	{object}	httputil.APIError	"plan metric consumption limitation ceiling reached"
+//	@Failure		500	{object}	httputil.APIError	"internal service persistence layer failure"
 //	@Router			/billing/usage [get]
 func (h *Handler) GetUsage(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())

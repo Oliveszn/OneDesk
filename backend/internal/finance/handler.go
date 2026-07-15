@@ -31,8 +31,8 @@ func NewHandler(s *Service, l *slog.Logger) *Handler {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{array}		InvoiceResponse
-//	@Failure		401	{object}	map[string]string	"Missing valid tenant credentials"
-//	@Failure		500	{object}	map[string]string	"Internal service database ledger query fault"
+//	@Failure		401	{object}	httputil.APIError	"Missing valid tenant credentials"
+//	@Failure		500	{object}	httputil.APIError	"Internal service database ledger query fault"
 //	@Router			/v1/invoices [get]
 func (h *Handler) ListInvoices(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
@@ -60,10 +60,10 @@ func (h *Handler) ListInvoices(w http.ResponseWriter, r *http.Request) {
 //	@Security		BearerAuth
 //	@Param			invoiceId	path		string	true	"System invoice tracking index token (UUID)"
 //	@Success		200			{object}	InvoiceResponse
-//	@Failure		400			{object}	map[string]string	"Malformed route sequence path ID value format"
-//	@Failure		401			{object}	map[string]string	"Missing valid tenant credentials"
-//	@Failure		404			{object}	map[string]string	"No invoice record matches the specified balance trace token"
-//	@Failure		500			{object}	map[string]string	"Internal service ledger entity retrieval database error"
+//	@Failure		400			{object}	httputil.APIError	"Malformed route sequence path ID value format"
+//	@Failure		401			{object}	httputil.APIError	"Missing valid tenant credentials"
+//	@Failure		404			{object}	httputil.APIError	"No invoice record matches the specified balance trace token"
+//	@Failure		500			{object}	httputil.APIError	"Internal service ledger entity retrieval database error"
 //	@Router			/v1/invoices/{invoiceId} [get]
 func (h *Handler) GetInvoice(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
@@ -103,10 +103,10 @@ func (h *Handler) GetInvoice(w http.ResponseWriter, r *http.Request) {
 //	@Security		BearerAuth
 //	@Param			invoiceId	path		string	true	"System invoice tracking index token (UUID)"
 //	@Success		200			{object}	InvoiceResponse
-//	@Failure		400			{object}	map[string]string	"Malformed route sequence path ID value format"
-//	@Failure		401			{object}	map[string]string	"Missing valid tenant credentials"
-//	@Failure		404			{object}	map[string]string	"No invoice record matches the specified balance trace token"
-//	@Failure		500			{object}	map[string]string	"Internal service balance modification execution pipeline error"
+//	@Failure		400			{object}	httputil.APIError	"Malformed route sequence path ID value format"
+//	@Failure		401			{object}	httputil.APIError	"Missing valid tenant credentials"
+//	@Failure		404			{object}	httputil.APIError	"No invoice record matches the specified balance trace token"
+//	@Failure		500			{object}	httputil.APIError	"Internal service balance modification execution pipeline error"
 //	@Router			/v1/invoices/{invoiceId}/pay [patch]
 func (h *Handler) PayInvoice(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())

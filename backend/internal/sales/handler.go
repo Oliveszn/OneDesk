@@ -35,8 +35,8 @@ func NewHandler(s *Service, l *slog.Logger) *Handler {
 //	@Security		BearerAuth
 //	@Param			request	body		CreateCustomerRequest	true	"Customer details input parameters"
 //	@Success		201		{object}	CustomerResponse
-//	@Failure		400		{object}	map[string]string	"Invalid payload data syntax or missing required fields"
-//	@Failure		401		{object}	map[string]string	"Missing valid tenant validation credentials"
+//	@Failure		400		{object}	httputil.APIError	"Invalid payload data syntax or missing required fields"
+//	@Failure		401		{object}	httputil.APIError	"Missing valid tenant validation credentials"
 //	@Router			/v1/customers [post]
 func (h *Handler) CreateCustomer(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
@@ -70,8 +70,8 @@ func (h *Handler) CreateCustomer(w http.ResponseWriter, r *http.Request) {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{array}		CustomerResponse
-//	@Failure		401	{object}	map[string]string	"Missing valid tenant validation credentials"
-//	@Failure		500	{object}	map[string]string	"Internal service database lookup fault"
+//	@Failure		401	{object}	httputil.APIError	"Missing valid tenant validation credentials"
+//	@Failure		500	{object}	httputil.APIError	"Internal service database lookup fault"
 //	@Router			/v1/customers [get]
 func (h *Handler) ListCustomers(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
@@ -100,10 +100,10 @@ func (h *Handler) ListCustomers(w http.ResponseWriter, r *http.Request) {
 //	@Security		BearerAuth
 //	@Param			request	body		CreateOrderRequest	true	"Order checklist containing items list details mapping"
 //	@Success		201		{object}	OrderResponse
-//	@Failure		400		{object}	map[string]string	"Invalid references or schema entity fields input data validation errors"
-//	@Failure		401		{object}	map[string]string	"Missing valid tenant validation credentials"
-//	@Failure		403		{object}	map[string]string	"Active monthly plan order transaction cap limit exhausted"
-//	@Failure		409		{object}	map[string]string	"Order registered but partial stock depletion triggered a fallback state"
+//	@Failure		400		{object}	httputil.APIError	"Invalid references or schema entity fields input data validation errors"
+//	@Failure		401		{object}	httputil.APIError	"Missing valid tenant validation credentials"
+//	@Failure		403		{object}	httputil.APIError	"Active monthly plan order transaction cap limit exhausted"
+//	@Failure		409		{object}	httputil.APIError	"Order registered but partial stock depletion triggered a fallback state"
 //	@Router			/v1/orders [post]
 func (h *Handler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
@@ -156,10 +156,10 @@ func (h *Handler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 //	@Security		BearerAuth
 //	@Param			orderId	path		string	true	"System transaction reference token lookup ID (UUID)"
 //	@Success		200		{object}	OrderResponse
-//	@Failure		400		{object}	map[string]string	"Malformed track sequence path identifier value format"
-//	@Failure		401		{object}	map[string]string	"Missing valid tenant validation credentials"
-//	@Failure		404		{object}	map[string]string	"No transactional invoice matches the specified trace index ID"
-//	@Failure		500		{object}	map[string]string	"Core data repository extraction execution block runtime failure"
+//	@Failure		400		{object}	httputil.APIError	"Malformed track sequence path identifier value format"
+//	@Failure		401		{object}	httputil.APIError	"Missing valid tenant validation credentials"
+//	@Failure		404		{object}	httputil.APIError	"No transactional invoice matches the specified trace index ID"
+//	@Failure		500		{object}	httputil.APIError	"Core data repository extraction execution block runtime failure"
 //	@Router			/v1/orders/{orderId} [get]
 func (h *Handler) GetOrder(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())

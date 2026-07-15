@@ -49,28 +49,19 @@ const docTemplate = `{
                     "400": {
                         "description": "invalid request body",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     },
                     "401": {
                         "description": "invalid email or password",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     },
                     "500": {
                         "description": "internal error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     }
                 }
@@ -194,28 +185,19 @@ const docTemplate = `{
                     "400": {
                         "description": "invalid request body / validation error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     },
                     "409": {
                         "description": "email already registered",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     },
                     "500": {
                         "description": "internal error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httputil.APIError"
                         }
                     }
                 }
@@ -970,6 +952,369 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/purchase-orders": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all tracking supply purchase orders bound to the active tenant workspace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "procurement"
+                ],
+                "summary": "List purchase orders",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/procurement.PurchaseOrderResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal query pipeline process extraction error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/purchase-orders/{poId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches the layout metrics, current lifecycle stage, and structured item blocks for a unique purchase order identity token.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "procurement"
+                ],
+                "summary": "Get purchase order details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System purchase order identifier tracking string (UUID)",
+                        "name": "poId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/procurement.PurchaseOrderResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed query identity format match",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Target supply purchase tracking profile is empty",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal retrieval system transaction pipeline error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/purchase-orders/{poId}/receive": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Executes material receipt pipelines, updating quantities and switching the record track context state over into 'received' or tracking execution fault statuses.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "procurement"
+                ],
+                "summary": "Fulfill and settle inventory delivery",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System purchase order identifier tracking string (UUID)",
+                        "name": "poId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "400": {
+                        "description": "Malformed tracking path arguments parameter",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Fulfillment block mismatch (order not in 'sent' state or stock calculation pipeline issue)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/purchase-orders/{poId}/send": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Assigns a designated dispatch entity identity parameter onto a 'suggested' state template and transitions its status tracking to 'sent'.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "procurement"
+                ],
+                "summary": "Assign vendor and send purchase order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System purchase order identifier tracking string (UUID)",
+                        "name": "poId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Identity mapping metrics for assignment execution tracking parameters",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/procurement.SendPurchaseOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/procurement.PurchaseOrderResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed route parameters or malformed entity parameters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Target purchase order instance index mismatch",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Target item is not structurally isolated inside the 'suggested' status window",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal supply ledger modifications pipeline crash error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/vendors": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves all vendor records assigned inside the current isolation context.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "procurement"
+                ],
+                "summary": "List workspace tracking vendors",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/procurement.VendorResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal service datastore execution error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Registers a brand new material or product vendor context under the tenant workspace ledger.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "procurement"
+                ],
+                "summary": "Register a new procurement vendor",
+                "parameters": [
+                    {
+                        "description": "Vendor creation configuration payload parameters",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/procurement.CreateVendorRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/procurement.VendorResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed body fields or explicit repository logic restriction match",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing valid tenant credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/v1/warehouses": {
             "get": {
                 "security": [
@@ -1215,6 +1560,15 @@ const docTemplate = `{
                 }
             }
         },
+        "httputil.APIError": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "invalid request body"
+                }
+            }
+        },
         "inventory.AdjustStockRequest": {
             "type": "object",
             "properties": {
@@ -1299,6 +1653,85 @@ const docTemplate = `{
                 "warehouse_id": {
                     "type": "string",
                     "example": "8f076135-d858-45ec-b9cc-0320df4ee99c"
+                }
+            }
+        },
+        "procurement.CreateVendorRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "Acme Industrial Supply"
+                }
+            }
+        },
+        "procurement.POItemResponse": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string",
+                    "example": "p9876543-1234-abcd-ef01-234567890abc"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 250
+                },
+                "warehouse_id": {
+                    "type": "string",
+                    "example": "w1112131-4151-6171-8191-011121314151"
+                }
+            }
+        },
+        "procurement.PurchaseOrderResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/procurement.POItemResponse"
+                    }
+                },
+                "po_id": {
+                    "type": "string",
+                    "example": "b2c3d4e5-6789-0abc-def1-234567890abc"
+                },
+                "status": {
+                    "description": "e.g., suggested, sent, received, receive_issue",
+                    "type": "string",
+                    "example": "suggested"
+                },
+                "vendor_id": {
+                    "description": "null until assigned",
+                    "type": "string",
+                    "example": "a1b2c3d4-5678-90ab-cdef-1234567890ab"
+                }
+            }
+        },
+        "procurement.SendPurchaseOrderRequest": {
+            "type": "object",
+            "required": [
+                "vendor_id"
+            ],
+            "properties": {
+                "vendor_id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-5678-90ab-cdef-1234567890ab"
+                }
+            }
+        },
+        "procurement.VendorResponse": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "Acme Industrial Supply"
+                },
+                "vendor_id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-5678-90ab-cdef-1234567890ab"
                 }
             }
         },

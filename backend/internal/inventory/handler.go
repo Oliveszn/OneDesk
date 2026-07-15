@@ -34,8 +34,8 @@ func NewHandler(s *Service, l *slog.Logger) *Handler {
 //	@Security		BearerAuth
 //	@Param			request	body		CreateWarehouseRequest	true	"Warehouse creation parameters"
 //	@Success		201		{object}	WarehouseResponse
-//	@Failure		400		{object}	map[string]string	"Invalid payload or request processing error"
-//	@Failure		401		{object}	map[string]string	"Missing valid tenant validation credentials"
+//	@Failure		400		{object}	httputil.APIError	"Invalid payload or request processing error"
+//	@Failure		401		{object}	httputil.APIError	"Missing valid tenant validation credentials"
 //	@Router			/v1/warehouses [post]
 func (h *Handler) CreateWarehouse(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
@@ -69,8 +69,8 @@ func (h *Handler) CreateWarehouse(w http.ResponseWriter, r *http.Request) {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{array}		WarehouseResponse
-//	@Failure		401	{object}	map[string]string	"Missing valid tenant validation credentials"
-//	@Failure		500	{object}	map[string]string	"Internal service storage lookup engine failure"
+//	@Failure		401	{object}	httputil.APIError	"Missing valid tenant validation credentials"
+//	@Failure		500	{object}	httputil.APIError	"Internal service storage lookup engine failure"
 //	@Router			/v1/warehouses [get]
 func (h *Handler) ListWarehouses(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
@@ -99,10 +99,10 @@ func (h *Handler) ListWarehouses(w http.ResponseWriter, r *http.Request) {
 //	@Security		BearerAuth
 //	@Param			request	body		CreateProductRequest	true	"Product registration data template"
 //	@Success		201		{object}	ProductResponse
-//	@Failure		400		{object}	map[string]string	"Invalid structural input payload values"
-//	@Failure		401		{object}	map[string]string	"Missing valid tenant validation credentials"
-//	@Failure		403		{object}	map[string]string	"Product catalog resource entitlement quota exhausted"
-//	@Failure		409		{object}	map[string]string	"SKU code entry collision matching active entity records"
+//	@Failure		400		{object}	httputil.APIError	"Invalid structural input payload values"
+//	@Failure		401		{object}	httputil.APIError	"Missing valid tenant validation credentials"
+//	@Failure		403		{object}	httputil.APIError	"Product catalog resource entitlement quota exhausted"
+//	@Failure		409		{object}	httputil.APIError	"SKU code entry collision matching active entity records"
 //	@Router			/v1/products [post]
 func (h *Handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
@@ -145,8 +145,8 @@ func (h *Handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{array}		ProductResponse
-//	@Failure		401	{object}	map[string]string	"Missing valid tenant validation credentials"
-//	@Failure		500	{object}	map[string]string	"Core relational lookup tracking query fault context"
+//	@Failure		401	{object}	httputil.APIError	"Missing valid tenant validation credentials"
+//	@Failure		500	{object}	httputil.APIError	"Core relational lookup tracking query fault context"
 //	@Router			/v1/products [get]
 func (h *Handler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
@@ -176,10 +176,10 @@ func (h *Handler) ListProducts(w http.ResponseWriter, r *http.Request) {
 //	@Param			productId	path		string				true	"Target catalog item system resource ID (UUID)"
 //	@Param			request		body		AdjustStockRequest	true	"Storage destination map and balancing metrics delta values"
 //	@Success		200			{object}	StockLevelResponse
-//	@Failure		400			{object}	map[string]string	"Malformed route parameters or tracking payload errors"
-//	@Failure		401			{object}	map[string]string	"Missing valid tenant validation credentials"
-//	@Failure		404			{object}	map[string]string	"Target unique identification index resource missing"
-//	@Failure		409			{object}	map[string]string	"Balancing step rejected because final allocation would fall below zero"
+//	@Failure		400			{object}	httputil.APIError	"Malformed route parameters or tracking payload errors"
+//	@Failure		401			{object}	httputil.APIError	"Missing valid tenant validation credentials"
+//	@Failure		404			{object}	httputil.APIError	"Target unique identification index resource missing"
+//	@Failure		409			{object}	httputil.APIError	"Balancing step rejected because final allocation would fall below zero"
 //	@Router			/v1/products/{productId}/stock/adjust [post]
 func (h *Handler) AdjustStock(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())
@@ -230,10 +230,10 @@ func (h *Handler) AdjustStock(w http.ResponseWriter, r *http.Request) {
 //	@Security		BearerAuth
 //	@Param			productId	path		string	true	"Target inventory resource look up track key ID (UUID)"
 //	@Success		200			{array}		StockLevelResponse
-//	@Failure		400			{object}	map[string]string	"Malformed route identification parameters"
-//	@Failure		401			{object}	map[string]string	"Missing valid tenant validation credentials"
-//	@Failure		404			{object}	map[string]string	"No item registration matches the requested ID"
-//	@Failure		500			{object}	map[string]string	"Internal query execution layer exception structural crash"
+//	@Failure		400			{object}	httputil.APIError	"Malformed route identification parameters"
+//	@Failure		401			{object}	httputil.APIError	"Missing valid tenant validation credentials"
+//	@Failure		404			{object}	httputil.APIError	"No item registration matches the requested ID"
+//	@Failure		500			{object}	httputil.APIError	"Internal query execution layer exception structural crash"
 //	@Router			/v1/products/{productId}/stock [get]
 func (h *Handler) GetStock(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())

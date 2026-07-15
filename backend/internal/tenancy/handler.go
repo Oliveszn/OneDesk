@@ -25,8 +25,8 @@ func NewHandler(s *Service, l *slog.Logger) *Handler {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{object}	TenantResponse
-//	@Failure		401	{object}	map[string]string	"missing tenant context / unauthorized"
-//	@Failure		500	{object}	map[string]string	"internal error"
+//	@Failure		401	{object}	httputil.APIError	"missing tenant context / unauthorized"
+//	@Failure		500	{object}	httputil.APIError	"internal error"
 //	@Router			/tenants/me [get]
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := reqctx.TenantID(r.Context())

@@ -102,6 +102,12 @@ definitions:
         example: paid
         type: string
     type: object
+  httputil.APIError:
+    properties:
+      error:
+        example: invalid request body
+        type: string
+    type: object
   inventory.AdjustStockRequest:
     properties:
       delta:
@@ -161,6 +167,61 @@ definitions:
         type: string
       warehouse_id:
         example: 8f076135-d858-45ec-b9cc-0320df4ee99c
+        type: string
+    type: object
+  procurement.CreateVendorRequest:
+    properties:
+      name:
+        example: Acme Industrial Supply
+        type: string
+    required:
+    - name
+    type: object
+  procurement.POItemResponse:
+    properties:
+      product_id:
+        example: p9876543-1234-abcd-ef01-234567890abc
+        type: string
+      quantity:
+        example: 250
+        type: integer
+      warehouse_id:
+        example: w1112131-4151-6171-8191-011121314151
+        type: string
+    type: object
+  procurement.PurchaseOrderResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/procurement.POItemResponse'
+        type: array
+      po_id:
+        example: b2c3d4e5-6789-0abc-def1-234567890abc
+        type: string
+      status:
+        description: e.g., suggested, sent, received, receive_issue
+        example: suggested
+        type: string
+      vendor_id:
+        description: null until assigned
+        example: a1b2c3d4-5678-90ab-cdef-1234567890ab
+        type: string
+    type: object
+  procurement.SendPurchaseOrderRequest:
+    properties:
+      vendor_id:
+        example: a1b2c3d4-5678-90ab-cdef-1234567890ab
+        type: string
+    required:
+    - vendor_id
+    type: object
+  procurement.VendorResponse:
+    properties:
+      name:
+        example: Acme Industrial Supply
+        type: string
+      vendor_id:
+        example: a1b2c3d4-5678-90ab-cdef-1234567890ab
         type: string
     type: object
   sales.CreateCustomerRequest:
@@ -283,21 +344,15 @@ paths:
         "400":
           description: invalid request body
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httputil.APIError'
         "401":
           description: invalid email or password
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httputil.APIError'
         "500":
           description: internal error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httputil.APIError'
       summary: Authenticate user
       tags:
       - auth
@@ -380,21 +435,15 @@ paths:
         "400":
           description: invalid request body / validation error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httputil.APIError'
         "409":
           description: email already registered
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httputil.APIError'
         "500":
           description: internal error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httputil.APIError'
       summary: Register a new tenant
       tags:
       - auth
@@ -891,6 +940,248 @@ paths:
       summary: Adjust product stock level
       tags:
       - inventory
+  /v1/purchase-orders:
+    get:
+      description: Returns all tracking supply purchase orders bound to the active
+        tenant workspace.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/procurement.PurchaseOrderResponse'
+            type: array
+        "401":
+          description: Missing valid tenant credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal query pipeline process extraction error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List purchase orders
+      tags:
+      - procurement
+  /v1/purchase-orders/{poId}:
+    get:
+      description: Fetches the layout metrics, current lifecycle stage, and structured
+        item blocks for a unique purchase order identity token.
+      parameters:
+      - description: System purchase order identifier tracking string (UUID)
+        in: path
+        name: poId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/procurement.PurchaseOrderResponse'
+        "400":
+          description: Malformed query identity format match
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Missing valid tenant credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Target supply purchase tracking profile is empty
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal retrieval system transaction pipeline error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get purchase order details
+      tags:
+      - procurement
+  /v1/purchase-orders/{poId}/receive:
+    post:
+      description: Executes material receipt pipelines, updating quantities and switching
+        the record track context state over into 'received' or tracking execution
+        fault statuses.
+      parameters:
+      - description: System purchase order identifier tracking string (UUID)
+        in: path
+        name: poId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "400":
+          description: Malformed tracking path arguments parameter
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Missing valid tenant credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Fulfillment block mismatch (order not in 'sent' state or stock
+            calculation pipeline issue)
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Fulfill and settle inventory delivery
+      tags:
+      - procurement
+  /v1/purchase-orders/{poId}/send:
+    patch:
+      consumes:
+      - application/json
+      description: Assigns a designated dispatch entity identity parameter onto a
+        'suggested' state template and transitions its status tracking to 'sent'.
+      parameters:
+      - description: System purchase order identifier tracking string (UUID)
+        in: path
+        name: poId
+        required: true
+        type: string
+      - description: Identity mapping metrics for assignment execution tracking parameters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/procurement.SendPurchaseOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/procurement.PurchaseOrderResponse'
+        "400":
+          description: Malformed route parameters or malformed entity parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Missing valid tenant credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Target purchase order instance index mismatch
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Target item is not structurally isolated inside the 'suggested'
+            status window
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal supply ledger modifications pipeline crash error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Assign vendor and send purchase order
+      tags:
+      - procurement
+  /v1/vendors:
+    get:
+      description: Retrieves all vendor records assigned inside the current isolation
+        context.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/procurement.VendorResponse'
+            type: array
+        "401":
+          description: Missing valid tenant credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal service datastore execution error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List workspace tracking vendors
+      tags:
+      - procurement
+    post:
+      consumes:
+      - application/json
+      description: Registers a brand new material or product vendor context under
+        the tenant workspace ledger.
+      parameters:
+      - description: Vendor creation configuration payload parameters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/procurement.CreateVendorRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/procurement.VendorResponse'
+        "400":
+          description: Malformed body fields or explicit repository logic restriction
+            match
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Missing valid tenant credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Register a new procurement vendor
+      tags:
+      - procurement
   /v1/warehouses:
     get:
       description: Returns a full list of storage locations associated with the active

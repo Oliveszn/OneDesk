@@ -28,9 +28,9 @@ func NewHandler(s *Service, l *slog.Logger) *Handler {
 //	@Produce		json
 //	@Param			request	body		SignupRequest	true	"Signup Details"
 //	@Success		201		{object}	AuthResponse
-//	@Failure		400		{object}	map[string]string	"invalid request body / validation error"
-//	@Failure		409		{object}	map[string]string	"email already registered"
-//	@Failure		500		{object}	map[string]string	"internal error"
+//	@Failure		400		{object}	httputil.APIError	"invalid request body / validation error"
+//	@Failure		409		{object}	httputil.APIError	"email already registered"
+//	@Failure		500		{object}	httputil.APIError	"internal error"
 //	@Router			/tenants [post]
 func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 	var req SignupRequest
@@ -71,9 +71,9 @@ func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 //	@Produce		json
 //	@Param			request	body		LoginRequest	true	"Login Credentials"
 //	@Success		200		{object}	AuthResponse
-//	@Failure		400		{object}	map[string]string	"invalid request body"
-//	@Failure		401		{object}	map[string]string	"invalid email or password"
-//	@Failure		500		{object}	map[string]string	"internal error"
+//	@Failure		400		{object}	httputil.APIError	"invalid request body"
+//	@Failure		401		{object}	httputil.APIError	"invalid email or password"
+//	@Failure		500		{object}	httputil.APIError	"internal error"
 //	@Router			/auth/login [post]
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
