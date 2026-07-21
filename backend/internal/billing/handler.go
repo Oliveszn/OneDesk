@@ -126,7 +126,7 @@ func (h *Handler) InitiateUpgrade(w http.ResponseWriter, r *http.Request) {
 //	@Param			x-paystack-signature	header	string	true	"Cryptographic HMAC SHA512 signature computed with secret key"
 //	@Success		200						"Webhook verified and transaction processed successfully"
 //	@Failure		400						{object}	httputil.APIError	"Invalid payload, signature verification failure, or unknown reference"
-//	@Router			/billing/webhooks/paystack [post]
+//	@Router			/webhooks/paystack [post]
 func (h *Handler) PaystackWebhook(w http.ResponseWriter, r *http.Request) {
 	h.handleWebhook(w, r, "paystack")
 }
@@ -141,7 +141,7 @@ func (h *Handler) PaystackWebhook(w http.ResponseWriter, r *http.Request) {
 //	@Param			verif-hash	header	string	true	"Secret hash verification header configured in Flutterwave dashboard"
 //	@Success		200			"Webhook verified and transaction processed successfully"
 //	@Failure		400			{object}	httputil.APIError	"Invalid payload, bad secret header match, or processing issue"
-//	@Router			/billing/webhooks/flutterwave [post]
+//	@Router			/webhooks/flutterwave [post]
 func (h *Handler) FlutterwaveWebhook(w http.ResponseWriter, r *http.Request) {
 	h.handleWebhook(w, r, "flutterwave")
 }
