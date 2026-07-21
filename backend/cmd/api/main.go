@@ -15,6 +15,7 @@ import (
 	"github.com/Oliveszn/OneDesk/internal/events"
 	"github.com/Oliveszn/OneDesk/internal/finance"
 	"github.com/Oliveszn/OneDesk/internal/inventory"
+	"github.com/Oliveszn/OneDesk/internal/payments"
 	"github.com/Oliveszn/OneDesk/internal/procurement"
 	"github.com/Oliveszn/OneDesk/internal/sales"
 	"github.com/Oliveszn/OneDesk/internal/tenancy"
@@ -40,6 +41,11 @@ func main() {
 	serviceDSN := mustEnv("SERVICE_DB_DSN")
 	jwtSecret := mustEnv("JWT_SECRET")
 
+	paystackSecretKey := os.Getenv("PAYSTACK_SECRET_KEY")
+	flutterwaveSecretKey := os.Getenv("FLUTTERWAVE_SECRET_KEY")
+	flutterwaveWebhookHash := os.Getenv("FLUTTERWAVE_WEBHOOK_HASH")
+	flutterwaveRedirectURL := os.Getenv("FLUTTERWAVE_REDIRECT_URL")
+
 	database, err := db.New(ctx, appDSN, serviceDSN)
 	if err != nil {
 		log.Fatalf("connecting to database: %v", err)
@@ -49,8 +55,12 @@ func main() {
 	tokenService := token.NewJWTService(jwtSecret, 24*time.Hour)
 	bus := events.NewBus()
 
+	paystackGateway := payments.NewPaystackGateway(paystackSecretKey)
+	flutterwaveGateway := payments.NewFlutterwaveGateway(flutterwaveSecretKey, flutterwaveWebhookHash, flutterwaveRedirectURL)
+	orchestrator := payments.NewOrchestrator(paystackGateway, flutterwaveGateway)
+
 	billingRepo := billing.NewRepository(database)
-	billingService := billing.NewService(billingRepo, database)
+	billingService := billing.NewService(billingRepo, database, orchestrator)
 	billingHandler := billing.NewHandler(billingService, logger)
 
 	tenancyRepo := tenancy.NewRepository(database)
@@ -81,6 +91,14 @@ func main() {
 	bus.Subscribe(events.TypeOrderPlaced, financeService.HandleOrderPlaced)
 	bus.Subscribe(events.TypeStockLow, procurementService.HandleStockLow)
 	bus.Subscribe(events.TypePOReceived, inventoryService.HandlePOReceived)
+
+	go func() {
+		ticker := time.NewTicker(10 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			billingService.RunRecurringBillingOnce(context.Background())
+		}
+	}()
 
 	r := newRouter(authHandler, tenancyHandler, billingHandler, inventoryHandler, salesHandler, financeHandler, procurementHandler, tokenService)
 

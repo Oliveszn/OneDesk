@@ -27,6 +27,26 @@ type Subscription struct {
 	CurrentPeriodStart time.Time
 	CurrentPeriodEnd   *time.Time
 	CreatedAt          time.Time
+
+	// payment fields, populated once a subscription has gone through a checkout
+
+	Gateway           *string // "paystack" | "flutterwave"
+	GatewayAuthToken  *string // tokenized recurring-charge credential
+	CheckoutReference *string // set while a checkout is pending, cleared once resolved either way
+}
+
+// PaymentTransaction records every checkout attempt and recurring charge, successful or not
+type PaymentTransaction struct {
+	TransactionID     uuid.UUID
+	TenantID          uuid.UUID
+	SubscriptionID    uuid.UUID
+	Gateway           string
+	GatewayRef        string
+	Amount            float64
+	Currency          string
+	Status            string // pending, success, failed
+	AttemptedGateways []string
+	CreatedAt         time.Time
 }
 
 type UsageCounter struct {

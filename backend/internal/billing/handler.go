@@ -2,6 +2,7 @@ package billing
 
 import (
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 
@@ -70,4 +71,60 @@ func (h *Handler) GetUsage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputil.WriteJSON(w, http.StatusOK, usage)
+}
+
+// POST /v1/billing/upgrade — authenticated. Starts the checkout flow;
+// the subscription itself doesn't change until the webhook confirms payment
+func (h *Handler) InitiateUpgrade(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := reqctx.TenantID(r.Context())
+	if !ok {
+		httputil.WriteError(w, http.StatusUnauthorized, "missing tenant context")
+		return
+	}
+
+	var req UpgradeRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.Email == "" || req.Currency == "" {
+		httputil.WriteError(w, http.StatusBadRequest, "email and currency are required")
+		return
+	}
+
+	checkoutURL, err := h.service.InitiateUpgrade(r.Context(), tenantID, req.Email, req.Currency)
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadGateway, "could not start checkout: "+err.Error())
+		return
+	}
+	httputil.WriteJSON(w, http.StatusOK, UpgradeResponse{CheckoutURL: checkoutURL})
+}
+
+// PaystackWebhook and FlutterwaveWebhook are PUBLIC routes but each verifies its own cryptographic signature before trusting anything in the body
+func (h *Handler) PaystackWebhook(w http.ResponseWriter, r *http.Request) {
+	h.handleWebhook(w, r, "paystack")
+}
+
+func (h *Handler) FlutterwaveWebhook(w http.ResponseWriter, r *http.Request) {
+	h.handleWebhook(w, r, "flutterwave")
+}
+
+func (h *Handler) handleWebhook(w http.ResponseWriter, r *http.Request, gateway string) {
+	payload, err := io.ReadAll(r.Body)
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "could not read request body")
+		return
+	}
+
+	if err := h.service.HandleCheckoutWebhook(r.Context(), gateway, payload, r.Header); err != nil {
+		// Deliberately a generic response regardless of the actual
+		// failure reason (bad signature, unknown reference, DB error) —
+		// this endpoint is public and unauthenticated by nature; it
+		// shouldn't hand back diagnostic detail to whatever sent the
+		// request. The real error is logged server-side inside the
+		// service, not exposed here.
+		httputil.WriteError(w, http.StatusBadRequest, "webhook processing failed")
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }

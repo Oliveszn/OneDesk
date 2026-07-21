@@ -24,12 +24,15 @@ func newRouter(authHandler *auth.Handler, tenancyHandler *tenancy.Handler, billi
 	r.Post("/v1/tenants", authHandler.Signup)
 	r.Post("/v1/auth/login", authHandler.Login)
 	r.Get("/v1/billing/plans", billingHandler.ListPlans)
+	r.Post("/webhooks/paystack", billingHandler.PaystackWebhook)
+	r.Post("/webhooks/flutterwave", billingHandler.FlutterwaveWebhook)
 
 	// Auth routes everything after this middleware has tenant_id/user_id/role available via reqctx.TenantID(ctx)
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.Auth(tokenService))
 		r.Get("/v1/tenants/me", tenancyHandler.Me)
 		r.Get("/v1/billing/usage", billingHandler.GetUsage)
+		r.Post("/v1/billing/upgrade", billingHandler.InitiateUpgrade)
 
 		r.Post("/v1/warehouses", inventoryHandler.CreateWarehouse)
 		r.Get("/v1/warehouses", inventoryHandler.ListWarehouses)

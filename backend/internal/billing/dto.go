@@ -19,3 +19,13 @@ type UsageResponse struct {
 	UsersUsed    int    `json:"users_used" example:"2"`
 	UsersCap     *int   `json:"users_cap" example:"3" extensions:"x-nullable"`
 }
+
+// UpgradeRequest carries the billing email explicitly rather than pulling it from the tenant's admin user record
+type UpgradeRequest struct {
+	Email    string `json:"email"`
+	Currency string `json:"currency"` //"NGN", "USD" — drives the orchestrator's routing choice
+}
+
+type UpgradeResponse struct {
+	CheckoutURL string `json:"checkout_url"`
+}

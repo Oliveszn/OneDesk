@@ -25,7 +25,7 @@ func IsGatewayFailure(err error) bool {
 // Reference is OUR id (subscriptions.checkout_reference), not the gateway's
 // it's how the eventual webhook gets tied back to a specific tenant's subscription.
 type CheckoutRequest struct {
-	TenantId  uuid.UUID
+	TenantID  uuid.UUID
 	Email     string
 	Amount    float64
 	Currency  string
