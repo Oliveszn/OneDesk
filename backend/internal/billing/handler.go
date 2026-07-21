@@ -155,12 +155,7 @@ func (h *Handler) handleWebhook(w http.ResponseWriter, r *http.Request, gateway 
 	}
 
 	if err := h.service.HandleCheckoutWebhook(r.Context(), gateway, payload, r.Header); err != nil {
-		// Deliberately a generic response regardless of the actual
-		// failure reason (bad signature, unknown reference, DB error) —
-		// this endpoint is public and unauthenticated by nature; it
-		// shouldn't hand back diagnostic detail to whatever sent the
-		// request. The real error is logged server-side inside the
-		// service, not exposed here.
+		// a generic response regardless of the actual failure reason
 		h.logger.Error("webhook_handler: processing rejected", "gateway", gateway, "error", err.Error())
 		httputil.WriteError(w, http.StatusBadRequest, "webhook processing failed")
 		return
