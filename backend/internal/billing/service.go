@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Oliveszn/OneDesk/internal/cache"
 	"github.com/Oliveszn/OneDesk/internal/db"
 	"github.com/Oliveszn/OneDesk/internal/payments"
 	"github.com/google/uuid"
@@ -18,10 +19,11 @@ type Service struct {
 	repo         *Repository
 	db           *db.DB
 	orchestrator *payments.Orchestrator
+	cache        *cache.Client
 }
 
-func NewService(repo *Repository, d *db.DB, orchestrator *payments.Orchestrator) *Service {
-	return &Service{repo: repo, db: d, orchestrator: orchestrator}
+func NewService(repo *Repository, d *db.DB, orchestrator *payments.Orchestrator, c *cache.Client) *Service {
+	return &Service{repo: repo, db: d, orchestrator: orchestrator, cache: c}
 }
 
 // AssignDefaultPlan puts a newly signed-up tenant on the Free plan
@@ -140,6 +142,13 @@ func (s *Service) GetUsage(ctx context.Context, tenantID uuid.UUID) (*UsageRespo
 
 // ListPlans returns all available plans
 func (s *Service) ListPlans(ctx context.Context) ([]PlanResponse, error) {
+	key := cache.GlobalKey("plans", "list")
+
+	var cached []PlanResponse
+	if hit, _ := s.cache.Get(ctx, key, &cached); hit {
+		return cached, nil
+	}
+
 	plans, err := s.repo.ListAllPlans(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve plans global matrix catalog: %w", err)
@@ -157,6 +166,7 @@ func (s *Service) ListPlans(ctx context.Context) ([]PlanResponse, error) {
 			BillingInterval:   p.BillingInterval,
 		})
 	}
+	s.cache.Set(ctx, key, resp, time.Hour)
 	return resp, nil
 }
 

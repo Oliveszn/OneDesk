@@ -5,22 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/Oliveszn/OneDesk/internal/billing"
+	"github.com/Oliveszn/OneDesk/internal/cache"
 	"github.com/Oliveszn/OneDesk/internal/db"
 	"github.com/Oliveszn/OneDesk/internal/events"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
+const cacheTTL = 5 * time.Minute
+
 var ErrInvalidAdjustment = errors.New("stock adjustment would result in a negative quantity")
 
-// stockLowCandidate is an internal bookkeeping type — a product/warehouse
-// pair whose quantity crossed below its reorder point during an
-// adjustment, collected during a transaction and published as stock.low
-// events AFTER that transaction commits (see the publish calls below for
-// why: never publish from inside a still-open transaction whose outcome
-// isn't final yet).
 type stockLowCandidate struct {
 	ProductID    uuid.UUID
 	WarehouseID  uuid.UUID
@@ -32,10 +30,11 @@ type Service struct {
 	billing *billing.Service
 	bus     *events.Bus
 	db      *db.DB
+	cache   *cache.Client
 }
 
-func NewService(repo *Repository, b *billing.Service, bus *events.Bus, d *db.DB) *Service {
-	return &Service{repo: repo, billing: b, bus: bus, db: d}
+func NewService(repo *Repository, b *billing.Service, bus *events.Bus, d *db.DB, c *cache.Client) *Service {
+	return &Service{repo: repo, billing: b, bus: bus, db: d, cache: c}
 }
 
 func (s *Service) CreateWarehouse(ctx context.Context, tenantID uuid.UUID, name string) (*WarehouseResponse, error) {
@@ -55,10 +54,19 @@ func (s *Service) CreateWarehouse(ctx context.Context, tenantID uuid.UUID, name 
 	if err != nil {
 		return nil, fmt.Errorf("creating warehouse: %w", err)
 	}
+
+	s.cache.Delete(ctx, cache.TenantKey(tenantID, "warehouses", "list"))
 	return &resp, nil
 }
 
 func (s *Service) ListWarehouses(ctx context.Context, tenantID uuid.UUID) ([]WarehouseResponse, error) {
+	key := cache.TenantKey(tenantID, "warehouses", "list")
+
+	var cached []WarehouseResponse
+	if hit, _ := s.cache.Get(ctx, key, &cached); hit {
+		return cached, nil
+	}
+
 	var out []WarehouseResponse
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
 		warehouses, err := s.repo.ListWarehouses(ctx, tx, tenantID)
@@ -74,6 +82,7 @@ func (s *Service) ListWarehouses(ctx context.Context, tenantID uuid.UUID) ([]War
 	if err != nil {
 		return nil, fmt.Errorf("listing warehouses: %w", err)
 	}
+	s.cache.Set(ctx, key, out, cacheTTL)
 	return out, nil
 }
 
@@ -101,10 +110,18 @@ func (s *Service) CreateProduct(ctx context.Context, tenantID uuid.UUID, req Cre
 	if err != nil {
 		return nil, err
 	}
+	s.cache.Delete(ctx, cache.TenantKey(tenantID, "products", "list"))
 	return &resp, nil
 }
 
 func (s *Service) ListProducts(ctx context.Context, tenantID uuid.UUID) ([]ProductResponse, error) {
+	key := cache.TenantKey(tenantID, "products", "list")
+
+	var cached []ProductResponse
+	if hit, _ := s.cache.Get(ctx, key, &cached); hit {
+		return cached, nil
+	}
+
 	var out []ProductResponse
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
 		products, err := s.repo.ListProducts(ctx, tx, tenantID)
@@ -120,6 +137,7 @@ func (s *Service) ListProducts(ctx context.Context, tenantID uuid.UUID) ([]Produ
 	if err != nil {
 		return nil, fmt.Errorf("listing products: %w", err)
 	}
+	s.cache.Set(ctx, key, out, cacheTTL)
 	return out, nil
 }
 
@@ -235,13 +253,6 @@ func (s *Service) HandleOrderPlaced(ctx context.Context, e events.Event) error {
 	return nil
 }
 
-// HandlePOReceived is registered as a subscriber to events.TypePOReceived
-// in cmd/api/main.go — a purchase order being marked received restocks
-// each of its line items. Positive deltas can't fail the "would go
-// negative" check, so an !ok result here would mean something is
-// actually wrong (e.g. a genuine race with a concurrent decrement
-// draining the row simultaneously) rather than an expected outcome —
-// worth surfacing as a real error rather than silently swallowing it.
 func (s *Service) HandlePOReceived(ctx context.Context, e events.Event) error {
 	payload, ok := e.Payload.(events.POReceivedPayload)
 	if !ok {
@@ -266,13 +277,6 @@ func (s *Service) HandlePOReceived(ctx context.Context, e events.Event) error {
 	})
 }
 
-// publishStockLow is deliberately best-effort: the stock adjustment it's
-// reporting on has ALREADY committed successfully by the time this runs.
-// A failure to notify Procurement doesn't mean the adjustment failed —
-// it means a suggestion didn't get raised, which is a worse outcome for
-// the tenant than "the adjustment silently failed" would be, but not
-// one that should make an otherwise-successful stock adjustment or order
-// look like it failed. Logged, not returned, on purpose.
 func (s *Service) publishStockLow(ctx context.Context, tenantID uuid.UUID, c stockLowCandidate) {
 	err := s.bus.Publish(ctx, events.Event{
 		Type:     events.TypeStockLow,

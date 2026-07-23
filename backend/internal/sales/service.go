@@ -4,13 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Oliveszn/OneDesk/internal/billing"
+	"github.com/Oliveszn/OneDesk/internal/cache"
 	"github.com/Oliveszn/OneDesk/internal/db"
 	"github.com/Oliveszn/OneDesk/internal/events"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
+
+const cacheTTL = 5 * time.Minute
 
 var ErrEmptyOrder = errors.New("an order must have at least one item")
 
@@ -20,10 +24,11 @@ type Service struct {
 	billing *billing.Service
 	bus     *events.Bus
 	db      *db.DB
+	cache   *cache.Client
 }
 
-func NewService(repo *Repository, b *billing.Service, bus *events.Bus, d *db.DB) *Service {
-	return &Service{repo: repo, billing: b, bus: bus, db: d}
+func NewService(repo *Repository, b *billing.Service, bus *events.Bus, d *db.DB, c *cache.Client) *Service {
+	return &Service{repo: repo, billing: b, bus: bus, db: d, cache: c}
 }
 
 func (s *Service) CreateCustomer(ctx context.Context, tenantID uuid.UUID, req CreateCustomerRequest) (*CustomerResponse, error) {
@@ -43,10 +48,18 @@ func (s *Service) CreateCustomer(ctx context.Context, tenantID uuid.UUID, req Cr
 	if err != nil {
 		return nil, fmt.Errorf("creating customer: %w", err)
 	}
+	s.cache.Delete(ctx, cache.TenantKey(tenantID, "customers", "list"))
 	return &resp, nil
 }
 
 func (s *Service) ListCustomers(ctx context.Context, tenantID uuid.UUID) ([]CustomerResponse, error) {
+	key := cache.TenantKey(tenantID, "customers", "list")
+
+	var cached []CustomerResponse
+	if hit, _ := s.cache.Get(ctx, key, &cached); hit {
+		return cached, nil
+	}
+
 	var out []CustomerResponse
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
 		customers, err := s.repo.ListCustomers(ctx, tx, tenantID)
@@ -62,13 +75,10 @@ func (s *Service) ListCustomers(ctx context.Context, tenantID uuid.UUID) ([]Cust
 	if err != nil {
 		return nil, fmt.Errorf("listing customers: %w", err)
 	}
+	s.cache.Set(ctx, key, out, cacheTTL)
 	return out, nil
 }
 
-// PlaceOrder has two steps: 1 consume the order quota and insert the order and its line items in one tansaction
-// either the whole order exists or none of it does. 2 once comited publish order.placed on the bus. inventory
-// subscriber decrements stock int its own transcation
-// Its posssible for an order to commit and fail to be fullfilled due to insufficeint stock the error is marked "stock_issue"
 func (s *Service) PlaceOrder(ctx context.Context, tenantID uuid.UUID, req CreateOrderRequest) (*OrderResponse, error) {
 	customerID, err := uuid.Parse(req.CustomerID)
 	if err != nil {

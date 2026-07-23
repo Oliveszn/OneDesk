@@ -72,7 +72,7 @@ func main() {
 	orchestrator := payments.NewOrchestrator(paystackGateway, flutterwaveGateway)
 
 	billingRepo := billing.NewRepository(database)
-	billingService := billing.NewService(billingRepo, database, orchestrator)
+	billingService := billing.NewService(billingRepo, database, orchestrator, cacheClient)
 	billingHandler := billing.NewHandler(billingService, logger)
 
 	tenancyRepo := tenancy.NewRepository(database)
@@ -83,11 +83,11 @@ func main() {
 	authHandler := auth.NewHandler(authService, logger)
 
 	inventoryRepo := inventory.NewRepository()
-	inventoryService := inventory.NewService(inventoryRepo, billingService, bus, database)
+	inventoryService := inventory.NewService(inventoryRepo, billingService, bus, database, cacheClient)
 	inventoryHandler := inventory.NewHandler(inventoryService, logger)
 
 	salesRepo := sales.NewRepository()
-	salesService := sales.NewService(salesRepo, billingService, bus, database)
+	salesService := sales.NewService(salesRepo, billingService, bus, database, cacheClient)
 	salesHandler := sales.NewHandler(salesService, logger)
 
 	financeRepo := finance.NewRepository()
@@ -95,7 +95,7 @@ func main() {
 	financeHandler := finance.NewHandler(financeService, logger)
 
 	procurementRepo := procurement.NewRepository()
-	procurementService := procurement.NewService(procurementRepo, bus, database)
+	procurementService := procurement.NewService(procurementRepo, bus, database, cacheClient)
 	procurementHandler := procurement.NewHandler(procurementService, logger)
 
 	//this the place where sales, inventory and finace is connected

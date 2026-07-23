@@ -4,21 +4,26 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
+	"github.com/Oliveszn/OneDesk/internal/cache"
 	"github.com/Oliveszn/OneDesk/internal/db"
 	"github.com/Oliveszn/OneDesk/internal/events"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
+const cacheTTL = 5 * time.Minute
+
 type Service struct {
-	repo *Repository
-	bus  *events.Bus
-	db   *db.DB
+	repo  *Repository
+	bus   *events.Bus
+	db    *db.DB
+	cache *cache.Client
 }
 
-func NewService(repo *Repository, bus *events.Bus, d *db.DB) *Service {
-	return &Service{repo: repo, bus: bus, db: d}
+func NewService(repo *Repository, bus *events.Bus, d *db.DB, c *cache.Client) *Service {
+	return &Service{repo: repo, bus: bus, db: d, cache: c}
 }
 
 func (s *Service) CreateVendor(ctx context.Context, tenantID uuid.UUID, name string) (*VendorResponse, error) {
@@ -37,10 +42,18 @@ func (s *Service) CreateVendor(ctx context.Context, tenantID uuid.UUID, name str
 	if err != nil {
 		return nil, fmt.Errorf("creating vendor: %w", err)
 	}
+	s.cache.Delete(ctx, cache.TenantKey(tenantID, "vendors", "list"))
 	return &resp, nil
 }
 
 func (s *Service) ListVendors(ctx context.Context, tenantID uuid.UUID) ([]VendorResponse, error) {
+	key := cache.TenantKey(tenantID, "vendors", "list")
+
+	var cached []VendorResponse
+	if hit, _ := s.cache.Get(ctx, key, &cached); hit {
+		return cached, nil
+	}
+
 	var out []VendorResponse
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
 		vendors, err := s.repo.ListVendors(ctx, tx, tenantID)
@@ -56,6 +69,7 @@ func (s *Service) ListVendors(ctx context.Context, tenantID uuid.UUID) ([]Vendor
 	if err != nil {
 		return nil, fmt.Errorf("listing vendors: %w", err)
 	}
+	s.cache.Set(ctx, key, out, cacheTTL)
 	return out, nil
 }
 

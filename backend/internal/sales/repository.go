@@ -57,10 +57,6 @@ func (r *Repository) ListCustomers(ctx context.Context, tx pgx.Tx, tenantID uuid
 	return out, rows.Err()
 }
 
-// CreateOrder relies on the customers foreign key to reject an unknown
-// customer_id, rather than doing a separate existence-check SELECT
-// first — one round trip instead of two, and the DB is the actual
-// source of truth for referential integrity either way.
 func (r *Repository) CreateOrder(ctx context.Context, tx pgx.Tx, tenantID, customerID uuid.UUID) (*Order, error) {
 	var o Order
 	err := tx.QueryRow(ctx,
@@ -77,11 +73,6 @@ func (r *Repository) CreateOrder(ctx context.Context, tx pgx.Tx, tenantID, custo
 	return &o, nil
 }
 
-// CreateOrderItem relies on the products/warehouses foreign keys the
-// same way — a deliberate choice to enforce "does this product/warehouse
-// actually belong to this tenant" at the database level via FK + RLS,
-// rather than sales.Repository querying inventory's tables directly,
-// which would cross the module boundary this project is built around.
 func (r *Repository) CreateOrderItem(ctx context.Context, tx pgx.Tx, tenantID, orderID, productID, warehouseID uuid.UUID, quantity int, unitPrice float64) (*OrderItem, error) {
 	var item OrderItem
 	err := tx.QueryRow(ctx,
@@ -140,9 +131,6 @@ func (r *Repository) ListOrderItems(ctx context.Context, tx pgx.Tx, tenantID, or
 	return out, rows.Err()
 }
 
-// UpdateOrderStatus is used as a compensating action when fulfillment
-// (the order.placed event) fails after the order itself already
-// committed — see sales.Service.PlaceOrder.
 func (r *Repository) UpdateOrderStatus(ctx context.Context, tx pgx.Tx, tenantID, orderID uuid.UUID, status string) error {
 	_, err := tx.Exec(ctx,
 		`UPDATE orders SET status = $1 WHERE tenant_id = $2 AND order_id = $3`,
@@ -154,10 +142,6 @@ func (r *Repository) UpdateOrderStatus(ctx context.Context, tx pgx.Tx, tenantID,
 	return nil
 }
 
-// fkViolatesConstraint checks both that err is a foreign-key violation
-// (SQLSTATE 23503) AND that it's specifically the named constraint —
-// Postgres's default naming (<table>_<column>_fkey) is what makes the
-// constraint names above predictable without hardcoding them elsewhere.
 func fkViolatesConstraint(err error, constraintName string) bool {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
