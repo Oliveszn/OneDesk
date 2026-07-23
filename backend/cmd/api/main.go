@@ -6,11 +6,13 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	_ "github.com/Oliveszn/OneDesk/docs"
 	"github.com/Oliveszn/OneDesk/internal/auth"
 	"github.com/Oliveszn/OneDesk/internal/billing"
+	"github.com/Oliveszn/OneDesk/internal/cache"
 	"github.com/Oliveszn/OneDesk/internal/db"
 	"github.com/Oliveszn/OneDesk/internal/events"
 	"github.com/Oliveszn/OneDesk/internal/finance"
@@ -46,6 +48,15 @@ func main() {
 	flutterwaveWebhookHash := os.Getenv("FLUTTERWAVE_WEBHOOK_HASH")
 	flutterwaveRedirectURL := os.Getenv("FLUTTERWAVE_REDIRECT_URL")
 
+	redisAddr := os.Getenv("REDIS_ADDR")
+	redisPassword := os.Getenv("REDIS_PASSWORD")
+	redisDB := 0
+	if v := os.Getenv("REDIS_DB"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil {
+			redisDB = parsed
+		}
+	}
+
 	database, err := db.New(ctx, appDSN, serviceDSN)
 	if err != nil {
 		log.Fatalf("connecting to database: %v", err)
@@ -54,6 +65,7 @@ func main() {
 
 	tokenService := token.NewJWTService(jwtSecret, 24*time.Hour)
 	bus := events.NewBus()
+	cacheClient := cache.New(redisAddr, redisPassword, redisDB)
 
 	paystackGateway := payments.NewPaystackGateway(paystackSecretKey)
 	flutterwaveGateway := payments.NewFlutterwaveGateway(flutterwaveSecretKey, flutterwaveWebhookHash, flutterwaveRedirectURL)
