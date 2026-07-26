@@ -138,7 +138,6 @@ every design correction that happened mid-build is in
 
 **Every deliberate trade-off**, argued out with the alternative
 considered and rejected, is in [`TRADEOFFS.md`](./TRADEOFFS.md).
-Caching gets its own deeper write-up in [`CACHING.md`](./CACHING.md).
 
 ---
 
