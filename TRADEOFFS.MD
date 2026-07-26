@@ -10,7 +10,7 @@ I went with shared database, shared schema, `tenant_id` on every table,
 enforced by Postgres Row-Level Security, instead of schema-per-tenant
 or a fully separate database per tenant. Schema-per-tenant is the
 "easier to reason about" option (you basically can't leak data across a
-schema boundary by accident), but it also doesn't scale operationally —
+schema boundary by accident), but it also doesn't scale operationally
 every migration has to run N times, and it sidesteps the actual hard
 problem instead of solving it. I wanted to solve the harder, more common
 real-world version: proving isolation holds _inside_ a shared schema,
@@ -34,7 +34,7 @@ UUID."
 
 I have exactly two Postgres roles: `app_user` (RLS-bound, used for
 literally everything) and `app_service` (`BYPASSRLS`, used _only_ for
-the handful of operations that structurally cannot know a tenant yet —
+the handful of operations that structurally cannot know a tenant yet,
 signup's first insert, login's cross-tenant email lookup, and a payment
 webhook's `checkout_reference` correlation). All three of those are the
 same underlying problem: you can't scope a query by tenant when finding
@@ -56,7 +56,7 @@ row before that tenant's own context could possibly exist yet.
 **What I'd do differently with more time:**
 
 An automated test that iterates every table in the schema and asserts
-it (a) has `tenant_id`, (b) has RLS enabled, and (c) has a policy —
+it (a) has `tenant_id`, (b) has RLS enabled, and (c) has a policy,
 failing CI if a new table ever gets added without one. Right now that
 check is "did I remember," and I'd rather it be "the build fails if I
 forgot."
@@ -167,8 +167,7 @@ ceiling.
 
 **Failure handling / eviction (the equivalent concept here):**
 
-There isn't a TTL-based eviction concept in this system the way Traced
-had one, the closer analogy is the monthly reset of `usage_counters`,
+There isn't a TTL-based eviction concept in this system, the closer analogy is the monthly reset of `usage_counters`,
 which is handled by keying rows on `(tenant_id, period_start)` rather
 than mutating a single row in place. A new calendar month is simply a
 new row (lazily created via `INSERT ... ON CONFLICT DO NOTHING` on
@@ -276,7 +275,7 @@ and safe to serve slightly stale. `billing.ListPlans` (global,
 essentially never changes), and per-tenant lists for warehouses,
 products, customers, and vendors (all low write frequency) qualified.
 `inventory.GetStock`, `billing.GetUsage`, and `procurement.
-ListPurchaseOrders` deliberately did not, each for a different reason —
+ListPurchaseOrders` deliberately did not, each for a different reason,
 which is the more interesting design story than "what did you cache."
 
 **State management: how do you track what's cached, and why that key
