@@ -229,3 +229,92 @@ Documented, not hidden, full list with reasoning in
 `ARCHITECTURE.md`. No double-pay guard on invoices, no dunning/retry
 logic beyond a single `past_due` flip, no batching yet on the recurring
 billing worker's tenant sweep.
+
+func main() {
+ch := make(chan int, 1)
+
+    select {
+    case v := <-ch:
+    	fmt.Println("received:", v)
+    default:
+    	fmt.Println("no value ready")
+    }
+
+    ch <- 42
+
+    select {
+    case v := <-ch:
+    	fmt.Println("received:", v)
+    default:
+    	fmt.Println("no value ready")
+    }
+
+}
+//the first select hits default cos we are not sending anything into the channel when we finally send 42 it receives it in the second select
+//when we finally set it to unbuffered channel my thinking is around the fact that a sender and reciever must meet at the same time so when the first select runs and there's nothing to send in the receiver
+now wat come to my mind is the first select tries to recieve but gets nothing all of a sudden you try sending and go says hold on the first receiver didnt get anything
+
+exercise 2
+func main() {
+ch := make(chan int, 3)
+
+    for i := 0; i < 6; i++ {
+    	select {
+    	case ch <- i:
+    		fmt.Println("sent:", i)
+    	default:
+    		fmt.Println("dropped: i")
+    	}
+    }
+
+    close(ch)
+
+    for v := range ch {
+    	fmt.Println(v)
+    }
+
+}
+sent: 0
+sent: 1
+sent: 2
+dropped: i
+dropped: i
+dropped: i
+0
+1
+2
+
+execise 3
+func worker(jobs <-chan int, done <-chan struct{}) {
+for {
+select {
+case <-done:
+fmt.Println("worker exiting")
+return
+case job := <-jobs:
+fmt.Println("processing:", job)
+time.Sleep(100 _ time.Millisecond)
+default:
+fmt.Println("idle...")
+time.Sleep(200 _ time.Millisecond)
+}
+}
+}
+
+func main() {
+jobs := make(chan int)
+done := make(chan struct{})
+
+    go worker(jobs, done)
+
+    go func() {
+    	for i := 0; i < 3; i++ {
+    		time.Sleep(500 * time.Millisecond)
+    		jobs <- i
+    	}
+    }()
+
+    time.Sleep(2 * time.Second)
+    close(done)
+
+}
