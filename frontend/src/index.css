@@ -9,6 +9,7 @@
   --color-ledger-dark: #1a2739;
   --color-stamp: #b8863a; /* muted gold — signature accent, used sparingly */
   --color-sage: #5b7a63; /* muted ledger-green — secondary accent */
+  --color-danger: #9c4a3c; /* muted brick — dashboard-only: out-of-stock, destructive actions, errors. Kept desaturated to match the rest of the palette rather than a stock Bootstrap red. */
   --color-line: #e1ded6; /* hairline border / divider */
   --color-card: #fbfaf8; /* slightly lighter than paper, for cards */
 
