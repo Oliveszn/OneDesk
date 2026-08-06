@@ -1,4 +1,15 @@
-export default function PageHeader({ title, description, actions }) {
+import type { ReactNode } from "react";
+
+interface PageHeaderProps {
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+}
+export default function PageHeader({
+  title,
+  description,
+  actions,
+}: PageHeaderProps) {
   return (
     <div className="flex items-start justify-between gap-6 px-8 pt-8 pb-6">
       <div>
