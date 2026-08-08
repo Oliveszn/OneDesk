@@ -31,14 +31,14 @@ const navItems = [
     label: "Sales",
     Icon: ShoppingCart01Icon,
     accent: "#b8863a",
-    enabled: false,
+    enabled: true,
   },
   {
     to: "/dashboard/finance",
     label: "Finance",
     Icon: Invoice03Icon,
     accent: "#5b7a63",
-    enabled: false,
+    enabled: true,
   },
   {
     to: "/dashboard/procurement",

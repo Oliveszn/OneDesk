@@ -60,9 +60,6 @@ export const mockStockLevels = {
   ],
 };
 
-// Mirrors billing.UsageResponse — the real dashboard reads this to
-// decide whether to show the plan-limit banner at all, and whether
-// "New Product" should be disabled before the user even tries.
 export const mockUsage = {
   plan_name: "free",
   products_used: mockProducts.length,
