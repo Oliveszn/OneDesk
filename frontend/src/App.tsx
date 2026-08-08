@@ -4,6 +4,7 @@ import DashboardShell from "./dashboard/layout/DashboardShell";
 import OverviewPage from "./dashboard/modules/overview/OverviewPage";
 import InventoryPage from "./dashboard/modules/inventory/InventoryPage";
 import ComingSoon from "./dashboard/shared/ComingSoon";
+import SalesPage from "./dashboard/modules/sales/SalesPage";
 
 function App() {
   return (
@@ -14,7 +15,7 @@ function App() {
         <Route path="/dashboard" element={<DashboardShell />}>
           <Route index element={<OverviewPage />} />
           <Route path="inventory" element={<InventoryPage />} />
-          <Route path="sales" element={<ComingSoon moduleName="Sales" />} />
+          <Route path="sales" element={<SalesPage />} />
           <Route path="finance" element={<ComingSoon moduleName="Finance" />} />
           <Route
             path="procurement"

@@ -1,4 +1,17 @@
-export default function EmptyState({ Icon, title, description, action }) {
+import type { ReactNode } from "react";
+
+interface EmptyStateProps {
+  Icon: any;
+  title: string;
+  description?: string;
+  action?: ReactNode;
+}
+export default function EmptyState({
+  Icon,
+  title,
+  description,
+  action,
+}: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center text-center py-20 px-6">
       <div

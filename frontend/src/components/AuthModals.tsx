@@ -21,7 +21,7 @@ export function LoginModal({ open, onClose, onSwitchToRegister }) {
         </span>
       }
       width={400}
-      destroyOnClose
+      destroyOnHidden
     >
       <p className="text-sm mb-5" style={{ color: "#52585d" }}>
         Welcome back. Enter your details to access your workspace.
@@ -94,7 +94,7 @@ export function RegisterModal({ open, onClose, onSwitchToLogin }) {
         </span>
       }
       width={420}
-      destroyOnClose
+      destroyOnHidden
     >
       <p className="text-sm mb-5" style={{ color: "#52585d" }}>
         Free to start. No card required until you outgrow the Free plan.

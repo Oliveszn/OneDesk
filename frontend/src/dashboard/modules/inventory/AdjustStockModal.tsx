@@ -51,7 +51,7 @@ export default function AdjustStockModal({
         </span>
       }
       width={420}
-      destroyOnClose
+      destroyOnHidden
     >
       {product && (
         <>

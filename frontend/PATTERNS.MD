@@ -47,7 +47,7 @@ a new hue for a new status; find the closest existing meaning first.
 
 **Modals, not separate pages, for create/edit forms** — matches the
 landing page's Login/Register pattern. Ant Design `Modal` + `Form`,
-`destroyOnClose` so the form resets between opens. A modal's fields
+`destroyOnHidden` so the form resets between opens. A modal's fields
 should be exactly the request body fields the corresponding endpoint
 accepts — see `NewProductModal.jsx` vs. `CreateProductRequest` in the
 backend for the reference example of a 1:1 match.

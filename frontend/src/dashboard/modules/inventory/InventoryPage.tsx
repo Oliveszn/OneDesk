@@ -6,7 +6,6 @@ import PlanLimitBanner from "../../shared/PlanLimitBanner";
 import {
   mockProducts,
   mockStockLevels,
-  mockUsage,
   mockWarehouses,
 } from "../../mockData/inventory";
 import ProductsTable from "./ProductsTable";
@@ -14,6 +13,7 @@ import WarehousesTable from "./WarehousesTable";
 import NewProductModal from "./NewProductModal";
 import NewWarehouseModal from "./NewWarehouseModal";
 import AdjustStockModal from "./AdjustStockModal";
+import { mockUsage } from "../../mockData/billing";
 
 export default function InventoryPage() {
   const [tab, setTab] = useState("products");

@@ -22,7 +22,7 @@ export default function NewWarehouseModal({ open, onClose, onCreate }) {
         </span>
       }
       width={380}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}

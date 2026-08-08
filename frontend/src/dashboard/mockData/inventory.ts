@@ -59,11 +59,3 @@ export const mockStockLevels = {
     }, // below reorder point
   ],
 };
-
-export const mockUsage = {
-  plan_name: "free",
-  products_used: mockProducts.length,
-  products_cap: 50,
-  orders_used: 61,
-  orders_cap: 100,
-};
