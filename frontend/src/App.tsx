@@ -7,6 +7,7 @@ import ComingSoon from "./dashboard/shared/ComingSoon";
 import SalesPage from "./dashboard/modules/sales/SalesPage";
 import FinancePage from "./dashboard/modules/finance/FinancePage";
 import ProcurementPage from "./dashboard/modules/procurement/ProcurementPage";
+import BillingPage from "./dashboard/modules/billing/BillingPage";
 
 function App() {
   return (
@@ -20,7 +21,7 @@ function App() {
           <Route path="sales" element={<SalesPage />} />
           <Route path="finance" element={<FinancePage />} />
           <Route path="procurement" element={<ProcurementPage />} />
-          <Route path="billing" element={<ComingSoon moduleName="Billing" />} />
+          <Route path="billing" element={<BillingPage />} />
           <Route
             path="settings"
             element={<ComingSoon moduleName="Settings" />}
