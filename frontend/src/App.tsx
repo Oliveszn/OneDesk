@@ -6,6 +6,7 @@ import InventoryPage from "./dashboard/modules/inventory/InventoryPage";
 import ComingSoon from "./dashboard/shared/ComingSoon";
 import SalesPage from "./dashboard/modules/sales/SalesPage";
 import FinancePage from "./dashboard/modules/finance/FinancePage";
+import ProcurementPage from "./dashboard/modules/procurement/ProcurementPage";
 
 function App() {
   return (
@@ -18,10 +19,7 @@ function App() {
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="sales" element={<SalesPage />} />
           <Route path="finance" element={<FinancePage />} />
-          <Route
-            path="procurement"
-            element={<ComingSoon moduleName="Procurement" />}
-          />
+          <Route path="procurement" element={<ProcurementPage />} />
           <Route path="billing" element={<ComingSoon moduleName="Billing" />} />
           <Route
             path="settings"

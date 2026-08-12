@@ -45,14 +45,14 @@ const navItems = [
     label: "Procurement",
     Icon: TruckDeliveryIcon,
     accent: "#16191c",
-    enabled: false,
+    enabled: true,
   },
   {
     to: "/dashboard/billing",
     label: "Billing",
     Icon: Wallet02Icon,
     accent: "#e1ded6",
-    enabled: false,
+    enabled: true,
   },
 ];
 
